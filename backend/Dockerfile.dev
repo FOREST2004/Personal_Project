@@ -1,0 +1,15 @@
+FROM node:16-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y netcat-openbsd postgresql-client
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+RUN chmod +x wait-for-postgres.sh
+
+EXPOSE 5000
+
+CMD ["npm", "run", "dev"]

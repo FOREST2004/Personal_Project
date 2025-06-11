@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: xu-pet-shop-postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: xu_pet_shop_user
+      POSTGRES_PASSWORD: 123
+      POSTGRES_DB: xu_pet_shop
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - xu-pet-shop-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U xu_pet_shop_user -d xu_pet_shop"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend Node.js API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: xu-pet-shop-backend
+    restart: always
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    environment:
+      NODE_ENV: development
+      DB_USERNAME: xu_pet_shop_user
+      DB_PASSWORD: 123
+      DB_NAME: xu_pet_shop
+      DB_HOST: postgres
+      DB_PORT: 5432
+      JWT_SECRET: your_jwt_secret_key_super_secure_random_string_123456789
+      JWT_EXPIRES_IN: 7d
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["./wait-for-postgres.sh", "postgres", "npm", "run", "dev"]
+    networks:
+      - xu-pet-shop-network
+
+  # Frontend React Client
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: xu-pet-shop-frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      NODE_ENV: development
+      VITE_API_URL: http://localhost:5000/api
+      CHOKIDAR_USEPOLLING: true
+    depends_on:
+      - backend
+    networks:
+      - xu-pet-shop-network
+
+networks:
+  xu-pet-shop-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
