@@ -1,30 +1,10 @@
+// controllers/authController.js
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
-const { query } = require('../config/db');
+const User = require('../models/User');
 
 exports.register = async (req, res) => {
   try {
-    const { username, password, name_display, email, numberphone, location } = req.body;
-    
-    // Kiểm tra email đã tồn tại chưa
-    const checkResult = await query('SELECT * FROM users WHERE email = $1', [email]);
-    if (checkResult.rows.length > 0) {
-      return res.status(400).json({ message: 'Email đã được sử dụng' });
-    }
-    
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-    
-    // Tạo user mới
-    const result = await query(
-      `INSERT INTO users (username, password, name_display, email, numberphone, location, role, status, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, 'user', 'active', NOW(), NOW())
-       RETURNING id_user, username, email, name_display`,
-      [username, hashedPassword, name_display, email, numberphone, location]
-    );
-    
-    const newUser = result.rows[0];
+    const newUser = await User.createUser(req.body);
     
     // Tạo token
     const token = jwt.sign({ id: newUser.id_user }, process.env.JWT_SECRET, {
@@ -35,16 +15,19 @@ exports.register = async (req, res) => {
       status: 'success',
       token,
       data: {
-        user: {
-          id: newUser.id_user,
-          username: newUser.username,
-          email: newUser.email,
-          name_display: newUser.name_display
-        }
+        user: newUser
       }
     });
   } catch (error) {
-    console.error(error);
+    console.error('Error in register:', error);
+    
+    if (error.message.includes('đã được sử dụng')) {
+      return res.status(400).json({
+        status: 'fail',
+        message: error.message
+      });
+    }
+    
     res.status(500).json({
       status: 'error',
       message: 'Lỗi server',
@@ -57,20 +40,18 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
     
-    // Kiểm tra user tồn tại
-    const result = await query('SELECT * FROM users WHERE email = $1', [email]);
+    // Tìm user theo email
+    const user = await User.findByEmail(email);
     
-    if (result.rows.length === 0) {
+    if (!user) {
       return res.status(401).json({
         status: 'fail',
         message: 'Email hoặc mật khẩu không đúng'
       });
     }
     
-    const user = result.rows[0];
-    
     // Kiểm tra password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await User.verifyPassword(password, user.password);
     
     if (!isPasswordValid) {
       return res.status(401).json({
@@ -84,23 +65,96 @@ exports.login = async (req, res) => {
       expiresIn: process.env.JWT_EXPIRES_IN
     });
     
+    // Loại bỏ password khỏi response
+    delete user.password;
+    
     res.status(200).json({
       status: 'success',
       token,
       data: {
-        user: {
-          id: user.id_user,
-          username: user.username,
-          email: user.email,
-          name_display: user.name_display
-        }
+        user
       }
     });
   } catch (error) {
-    console.error(error);
+    console.error('Error in login:', error);
     res.status(500).json({
       status: 'error',
       message: 'Lỗi server',
+      error: error.message
+    });
+  }
+};
+
+// Thêm các endpoints mới
+exports.getProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id_user);
+    
+    if (!user) {
+      return res.status(404).json({
+        status: 'fail',
+        message: 'Người dùng không tìm thấy'
+      });
+    }
+    
+    // Loại bỏ password
+    delete user.password;
+    
+    res.status(200).json({
+      status: 'success',
+      data: { user }
+    });
+  } catch (error) {
+    console.error('Error in getProfile:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Lỗi khi lấy thông tin người dùng',
+      error: error.message
+    });
+  }
+};
+
+exports.updateProfile = async (req, res) => {
+  try {
+    const updatedUser = await User.updateProfile(req.user.id_user, req.body);
+    
+    res.status(200).json({
+      status: 'success',
+      data: { user: updatedUser }
+    });
+  } catch (error) {
+    console.error('Error in updateProfile:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Lỗi khi cập nhật thông tin',
+      error: error.message
+    });
+  }
+};
+
+exports.changePassword = async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    
+    await User.changePassword(req.user.id_user, oldPassword, newPassword);
+    
+    res.status(200).json({
+      status: 'success',
+      message: 'Đổi mật khẩu thành công'
+    });
+  } catch (error) {
+    console.error('Error in changePassword:', error);
+    
+    if (error.message.includes('không đúng')) {
+      return res.status(400).json({
+        status: 'fail',
+        message: error.message
+      });
+    }
+    
+    res.status(500).json({
+      status: 'error',
+      message: 'Lỗi khi đổi mật khẩu',
       error: error.message
     });
   }

@@ -1,9 +1,16 @@
-const { query } = require('../config/db');
+// controllers/categoryController.js
+const Category = require('../models/Category');
 
 exports.getAllCategories = async (req, res) => {
   try {
-    const result = await query('SELECT * FROM categories');
-    const categories = result.rows;
+    const includeProductCount = req.query.include_product_count === 'true';
+    
+    let categories;
+    if (includeProductCount) {
+      categories = await Category.findAllWithProductCount();
+    } else {
+      categories = await Category.findAll();
+    }
     
     res.status(200).json({
       status: 'success',
@@ -11,7 +18,7 @@ exports.getAllCategories = async (req, res) => {
       data: categories
     });
   } catch (error) {
-    console.error(error);
+    console.error('Error in getAllCategories:', error);
     res.status(500).json({
       status: 'error',
       message: 'Lỗi khi lấy danh sách danh mục',
@@ -22,9 +29,16 @@ exports.getAllCategories = async (req, res) => {
 
 exports.getCategoryById = async (req, res) => {
   try {
-    const result = await query('SELECT * FROM categories WHERE id_category = $1', [req.params.id]);
+    const includeDetails = req.query.include_details === 'true';
     
-    if (result.rows.length === 0) {
+    let category;
+    if (includeDetails) {
+      category = await Category.findByIdWithDetails(req.params.id);
+    } else {
+      category = await Category.findById(req.params.id);
+    }
+    
+    if (!category) {
       return res.status(404).json({
         status: 'fail',
         message: 'Không tìm thấy danh mục'
@@ -33,10 +47,10 @@ exports.getCategoryById = async (req, res) => {
     
     res.status(200).json({
       status: 'success',
-      data: result.rows[0]
+      data: category
     });
   } catch (error) {
-    console.error(error);
+    console.error('Error in getCategoryById:', error);
     res.status(500).json({
       status: 'error',
       message: 'Lỗi khi lấy thông tin danh mục',
@@ -47,28 +61,22 @@ exports.getCategoryById = async (req, res) => {
 
 exports.createCategory = async (req, res) => {
   try {
-    const { name } = req.body;
-    
-    // Kiểm tra xem danh mục đã tồn tại chưa
-    const checkResult = await query('SELECT * FROM categories WHERE name = $1', [name]);
-    if (checkResult.rows.length > 0) {
-      return res.status(400).json({
-        status: 'fail',
-        message: 'Danh mục này đã tồn tại'
-      });
-    }
-    
-    const result = await query(
-      'INSERT INTO categories (name, created_at, updated_at) VALUES ($1, NOW(), NOW()) RETURNING *',
-      [name]
-    );
+    const newCategory = await Category.createCategory(req.body);
     
     res.status(201).json({
       status: 'success',
-      data: result.rows[0]
+      data: newCategory
     });
   } catch (error) {
-    console.error(error);
+    console.error('Error in createCategory:', error);
+    
+    if (error.message.includes('đã tồn tại')) {
+      return res.status(400).json({
+        status: 'fail',
+        message: error.message
+      });
+    }
+    
     res.status(500).json({
       status: 'error',
       message: 'Lỗi khi tạo danh mục',
@@ -79,30 +87,22 @@ exports.createCategory = async (req, res) => {
 
 exports.updateCategory = async (req, res) => {
   try {
-    const { name } = req.body;
-    
-    // Tìm danh mục
-    const checkResult = await query('SELECT * FROM categories WHERE id_category = $1', [req.params.id]);
-    
-    if (checkResult.rows.length === 0) {
-      return res.status(404).json({
-        status: 'fail',
-        message: 'Không tìm thấy danh mục'
-      });
-    }
-    
-    // Cập nhật danh mục
-    const result = await query(
-      'UPDATE categories SET name = $1, updated_at = NOW() WHERE id_category = $2 RETURNING *',
-      [name, req.params.id]
-    );
+    const updatedCategory = await Category.updateCategory(req.params.id, req.body);
     
     res.status(200).json({
       status: 'success',
-      data: result.rows[0]
+      data: updatedCategory
     });
   } catch (error) {
-    console.error(error);
+    console.error('Error in updateCategory:', error);
+    
+    if (error.message.includes('không tìm thấy') || error.message.includes('đã tồn tại')) {
+      return res.status(400).json({
+        status: 'fail',
+        message: error.message
+      });
+    }
+    
     res.status(500).json({
       status: 'error',
       message: 'Lỗi khi cập nhật danh mục',
@@ -113,38 +113,64 @@ exports.updateCategory = async (req, res) => {
 
 exports.deleteCategory = async (req, res) => {
   try {
-    // Tìm danh mục
-    const checkResult = await query('SELECT * FROM categories WHERE id_category = $1', [req.params.id]);
-    
-    if (checkResult.rows.length === 0) {
-      return res.status(404).json({
-        status: 'fail',
-        message: 'Không tìm thấy danh mục'
-      });
-    }
-    
-    // Kiểm tra xem có sản phẩm nào thuộc danh mục này không
-    const productsCount = await query('SELECT COUNT(*) FROM products WHERE id_category = $1', [req.params.id]);
-    
-    if (parseInt(productsCount.rows[0].count) > 0) {
-      return res.status(400).json({
-        status: 'fail',
-        message: 'Không thể xóa danh mục này vì có sản phẩm liên quan. Hãy xóa sản phẩm trước.'
-      });
-    }
-    
-    // Xóa danh mục
-    await query('DELETE FROM categories WHERE id_category = $1', [req.params.id]);
+    await Category.deleteCategory(req.params.id);
     
     res.status(204).json({
       status: 'success',
       data: null
     });
   } catch (error) {
-    console.error(error);
+    console.error('Error in deleteCategory:', error);
+    
+    if (error.message.includes('không tìm thấy') || error.message.includes('không thể xóa')) {
+      return res.status(400).json({
+        status: 'fail',
+        message: error.message
+      });
+    }
+    
     res.status(500).json({
       status: 'error',
       message: 'Lỗi khi xóa danh mục',
+      error: error.message
+    });
+  }
+};
+
+// Thêm endpoints mới
+exports.getPopularCategories = async (req, res) => {
+  try {
+    const limit = req.query.limit ? parseInt(req.query.limit) : 5;
+    const categories = await Category.getPopularCategories(limit);
+    
+    res.status(200).json({
+      status: 'success',
+      results: categories.length,
+      data: categories
+    });
+  } catch (error) {
+    console.error('Error in getPopularCategories:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Lỗi khi lấy danh mục phổ biến',
+      error: error.message
+    });
+  }
+};
+
+exports.getCategoryStats = async (req, res) => {
+  try {
+    const stats = await Category.getCategoryStats();
+    
+    res.status(200).json({
+      status: 'success',
+      data: stats
+    });
+  } catch (error) {
+    console.error('Error in getCategoryStats:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Lỗi khi lấy thống kê danh mục',
       error: error.message
     });
   }

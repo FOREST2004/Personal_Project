@@ -20,4 +20,9 @@ router.put('/:id', protect, restrictTo('admin'), categoryController.updateCatego
 // Xóa danh mục (yêu cầu quyền admin)
 router.delete('/:id', protect, restrictTo('admin'), categoryController.deleteCategory);
 
+
+
+router.get('/popular', categoryController.getPopularCategories);
+router.get('/stats', protect, restrictTo('admin'), categoryController.getCategoryStats);
+
 module.exports = router;

@@ -156,5 +156,5 @@ INSERT INTO products (name, price, description, image, status, id_user, id_categ
 ('Chuồng chó inox', 2500000, 'Chuồng chó inox cao cấp, kích thước 100x80x90cm, bền đẹp.', 'dog_kennel.jpg', 'active', 6, 10),
 ('Nhà gỗ cho mèo', 1500000, 'Nhà gỗ thiết kế 2 tầng cho mèo, kích thước 60x40x80cm, có cầu thang và góc nghỉ.', 'cat_house.jpg', 'active', 7, 10),
 ('Giường nệm cho chó', 800000, 'Giường nệm êm ái cho chó, chất liệu cotton, kích thước 80x60cm, có thể giặt được.', 'dog_bed.jpg', 'active', 6, 10),
-('Hammock cho mèo', 400000, 'Hammock treo tường cho mèo, chất liệu canvas chắc chắn, thiết kế hiện đại.', 'cat_hammock.jpg', 'active', 7, 10),
-('Lều vải cho thú cưng', 350000, 'Lều vải di động cho thú cưng, dễ dàng gấp gọn, kích thước 50x50x60cm.', 'pet_tent.jpg', 'active', 4, 10);
+('Hammock cho mèo', 400000, 'Hammock treo tường cho mèo, chất liệu canvas chắc chắn, thiết kế hiện đại.', 'cat_hammock.jpg', 'active', 7, 10);
+-- ('Lều vải cho thú cưng', 350000, 'Lều vải di động cho thú cưng, dễ dàng gấp gọn, kích thước 50x50x60cm.', 'pet_tent.jpg', 'active', 4, 10);
