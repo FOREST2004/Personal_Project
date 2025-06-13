@@ -331,6 +331,7 @@ const ProductDetail = () => {
               <h3>Thông tin người bán</h3>
               <div className="detail-seller-details">
                 <p><strong>Tên:</strong> {product.user?.name_display || 'Ẩn danh'}</p>
+                <p><strong>SĐT:</strong> {product.user?.numberphone || 'Chưa cập nhật'}</p>
                 {product.user?.location && <p><strong>Địa chỉ:</strong> {product.user.location}</p>}
                 <button className="detail-contact-seller-btn" onClick={handleContactSeller}>
                   Liên hệ người bán

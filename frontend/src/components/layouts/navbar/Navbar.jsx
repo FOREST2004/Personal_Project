@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiMenu, FiX, FiSearch, FiUser, FiShoppingCart } from 'react-icons/fi';
 import { authService } from '../../../services/authService';
@@ -8,12 +8,40 @@ const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(false);
   
   // Kiểm tra authentication state
   const isAuthenticated = authService.isAuthenticated();
-  const currentUser = authService.getCurrentUser();
   const cartItemCount = 0; // TODO: Kết nối với cart state thực tế
   
+
+ // ✅ Fetch thông tin user khi đã đăng nhập
+ useEffect(() => {
+  const fetchUserProfile = async () => {
+    if (isAuthenticated) {
+      try {
+        setLoading(true);
+        const response = await authService.getProfile();
+        setUser(response.data.user);
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+        // Nếu lỗi 401, có thể token hết hạn
+        if (error.status === 401) {
+          authService.logout();
+          setUser(null);
+        }
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      setUser(null);
+    }
+  };
+
+  fetchUserProfile();
+}, [isAuthenticated]);
+
   const handleToggle = () => {
     setIsOpen(!isOpen);
   };
@@ -29,10 +57,19 @@ const Navbar = () => {
 
   const handleLogout = () => {
     authService.logout();
+    setUser(null); // Xóa thông tin user
     navigate('/');
     setIsOpen(false);
     // Refresh để cập nhật UI
     window.location.reload();
+  };
+
+   // ✅ Function để hiển thị tên user
+   const getUserDisplayName = () => {
+    if (loading) return 'Đang tải...';
+    if (!user) return 'User';
+    
+    return user.name_display || user.username || user.email?.split('@')[0] || 'User';
   };
 
   return (
@@ -89,7 +126,7 @@ const Navbar = () => {
               </button>
               <div className="dropdown-menu">
                 <div className="dropdown-item" style={{ fontWeight: 'bold', borderBottom: '1px solid #eee', marginBottom: '5px', paddingBottom: '10px' }}>
-                  Xin chào, {currentUser?.name || 'User'}
+                  Xin chào, {getUserDisplayName()}
                 </div>
                 <Link to="/profile" className="dropdown-item" onClick={() => setIsOpen(false)}>
                   Tài khoản của tôi

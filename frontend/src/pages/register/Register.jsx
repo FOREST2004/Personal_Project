@@ -1,14 +1,21 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiPhone } from 'react-icons/fi';
+import { Link, useNavigate } from 'react-router-dom';
+import { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiPhone, FiMapPin } from 'react-icons/fi';
 import './Register.css';
 
+import {authService} from '../../services/authService'
+
+
 const Register = () => {
+ 
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    fullName: '',
+    username: '',
     email: '',
-    phone: '',
+    numberphone: '',
+    name_display: '',
     password: '',
+    location: '',
     confirmPassword: ''
   });
   
@@ -16,6 +23,7 @@ const Register = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [agreeTerms, setAgreeTerms] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -23,13 +31,27 @@ const Register = () => {
       ...formData,
       [name]: value
     });
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
   };
   
   const validateForm = () => {
     const newErrors = {};
     
-    if (!formData.fullName) {
-      newErrors.fullName = 'Vui lòng nhập họ tên';
+    if (!formData.username.trim()) {
+      newErrors.username = 'Vui lòng nhập tên người dùng';
+    } else if (formData.username.trim().length < 2) {
+      newErrors.username = 'Tên người dùng phải có ít nhất 2 ký tự';
+    }
+
+    if (!formData.name_display.trim()) {
+      newErrors.name_display = 'Vui lòng nhập tên hiển thị';
+    } else if (formData.name_display.trim().length < 2) {
+      newErrors.name_display = 'Tên hiển thị phải có ít nhất 2 ký tự';
     }
     
     if (!formData.email) {
@@ -38,10 +60,13 @@ const Register = () => {
       newErrors.email = 'Email không hợp lệ';
     }
     
-    if (!formData.phone) {
-      newErrors.phone = 'Vui lòng nhập số điện thoại';
-    } else if (!/^[0-9]{10}$/.test(formData.phone)) {
-      newErrors.phone = 'Số điện thoại phải có 10 chữ số';
+    if (!formData.numberphone) {
+      newErrors.numberphone = 'Vui lòng nhập số điện thoại';
+    } else if (!/^[0-9]{10,11}$/.test(formData.numberphone)) {
+      newErrors.numberphone = 'Số điện thoại phải có 10-11 chữ số';  
+    }
+    if (!formData.location.trim()) {
+      newErrors.location = 'Vui lòng nhập địa chỉ';
     }
     
     if (!formData.password) {
@@ -53,6 +78,7 @@ const Register = () => {
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Mật khẩu xác nhận không khớp';
     }
+  
     
     if (!agreeTerms) {
       newErrors.terms = 'Bạn phải đồng ý với điều khoản sử dụng';
@@ -62,13 +88,48 @@ const Register = () => {
     return Object.keys(newErrors).length === 0;
   };
   
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (validateForm()) {
-      // Simulate registration (would connect to backend in real app)
-      console.log('Registration data:', formData);
-      alert(`Đăng ký thành công với email: ${formData.email}`);
+      try {
+        setIsLoading(true);
+        setErrors({});
+
+        const registerData = {
+          username: formData.username,
+          name_display: formData.name_display,
+          email: formData.email,
+          password: formData.password,
+          location: formData.location,
+          numberphone: formData.numberphone,
+        };
+
+        console.log('Sending registration data:', registerData);
+        const response = await authService.register(registerData);
+        console.log('Registration response:', response);
+        
+        // alert(`Đăng ký thành công! Chào mừng ${formData.name_display} đến với Pet Shop!`);
+        navigate('/login');
+        
+      } catch (error) {
+        console.error('Error during registration:', error);
+        
+        // Xử lý lỗi chi tiết
+        if (error.message) {
+          if (error.message.includes('email') || error.message.includes('Email')) {
+            setErrors({ auth: 'Email đã được sử dụng. Vui lòng chọn email khác.' });
+          } else if (error.message.includes('username') || error.message.includes('Username')) {
+            setErrors({ auth: 'Tên đăng nhập đã tồn tại. Vui lòng chọn tên khác.' });
+          } else {
+            setErrors({ auth: error.message });
+          }
+        } else {
+          setErrors({ auth: 'Đăng ký thất bại. Vui lòng thử lại sau.' });
+        }
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
   
@@ -81,23 +142,42 @@ const Register = () => {
         </div>
         
         <form className="register-form" onSubmit={handleSubmit}>
-          <div className={`form-group ${errors.fullName ? 'error' : ''}`}>
-            <label htmlFor="fullName">Họ và tên</label>
+          <div className={`form-group ${errors.username ? 'error' : ''}`}>
+            <label htmlFor="username">Họ và tên</label>
             <div className="input-group">
               <span className="input-icon">
                 <FiUser />
               </span>
               <input
                 type="text"
-                id="fullName"
-                name="fullName"
+                id="username"
+                name="username"
                 placeholder="Nhập họ và tên"
-                value={formData.fullName}
+                value={formData.username}
                 onChange={handleChange}
               />
             </div>
-            {errors.fullName && <div className="error-message">{errors.fullName}</div>}
+            {errors.username && <div className="error-message">{errors.username}</div>}
           </div>
+
+          <div className={`form-group ${errors.name_display ? 'error' : ''}`}>
+            <label htmlFor="name_display">Hiển thị tên</label>
+            <div className="input-group">
+              <span className="input-icon">
+                <FiUser />
+              </span>
+              <input
+                type="text"
+                id="name_display"
+                name="name_display"
+                placeholder="Hiển thị tên"
+                value={formData.name_display}
+                onChange={handleChange}
+              />
+            </div>
+            {errors.name_display && <div className="error-message">{errors.name_display}</div>}
+          </div>
+          
           
           <div className={`form-group ${errors.email ? 'error' : ''}`}>
             <label htmlFor="email">Email</label>
@@ -117,22 +197,40 @@ const Register = () => {
             {errors.email && <div className="error-message">{errors.email}</div>}
           </div>
           
-          <div className={`form-group ${errors.phone ? 'error' : ''}`}>
-            <label htmlFor="phone">Số điện thoại</label>
+          <div className={`form-group ${errors.numberphone ? 'error' : ''}`}>
+            <label htmlFor="numberphone">Số điện thoại</label>
             <div className="input-group">
               <span className="input-icon">
                 <FiPhone />
               </span>
               <input
                 type="tel"
-                id="phone"
-                name="phone"
+                id="numberphone"
+                name="numberphone"
                 placeholder="Nhập số điện thoại"
-                value={formData.phone}
+                value={formData.numberphone}
                 onChange={handleChange}
               />
             </div>
-            {errors.phone && <div className="error-message">{errors.phone}</div>}
+            {errors.numberphone && <div className="error-message">{errors.numberphone}</div>}
+          </div>
+
+          <div className={`form-group ${errors.location ? 'error' : ''}`}>
+            <label htmlFor="location">Địa chỉ</label>
+            <div className="input-group">
+              <span className="input-icon">
+                <FiMapPin />
+              </span>
+              <input
+                type="text"
+                id="location"
+                name="location"
+                placeholder="Nhập địa chỉ"
+                value={formData.location}
+                onChange={handleChange}
+              />
+            </div>
+            {errors.location && <div className="error-message">{errors.location}</div>}
           </div>
           
           <div className={`form-group ${errors.password ? 'error' : ''}`}>

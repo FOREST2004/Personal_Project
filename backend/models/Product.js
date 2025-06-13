@@ -135,7 +135,7 @@ class Product extends BaseModel {
   async findByIdWithDetails(id) {
     try {
       const sqlQuery = `
-        SELECT p.*, c.name as category_name, u.name_display as user_name, u.email as user_email, u.numberphone as user_phone, u.location as user_location
+        SELECT p.*, c.name as category_name, u.name_display as user_name, u.email as user_email, u.numberphone as user_numberphone, u.location as user_location
         FROM products p
         LEFT JOIN categories c ON p.id_category = c.id_category
         LEFT JOIN users u ON p.id_user = u.id_user
@@ -167,7 +167,7 @@ class Product extends BaseModel {
           id_user: row.id_user,
           name_display: row.user_name,
           email: row.user_email,
-          phone: row.user_phone,
+          numberphone: row.user_numberphone,
           location: row.user_location
         }
       };
