@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { FiMinus, FiPlus, FiShoppingCart, FiTruck, FiShield, FiCheck, FiArrowLeft, FiMapPin, FiUser, FiCalendar } from 'react-icons/fi';
 import './ProductDetail.css';
 import meoFallback from '../../assets/meo.jpg';
-import { productService } from '../../services/productService'; // Sử dụng service có sẵn
+import { productService } from '../../services/productService';
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -121,7 +121,6 @@ const ProductDetail = () => {
       return;
     }
 
-    // In a real app, this would add to cart context/localStorage
     const cartItem = {
       id: product.id_product,
       name: product.name,
@@ -131,7 +130,6 @@ const ProductDetail = () => {
       seller: product.user?.name_display || 'Không rõ'
     };
 
-    // Save to localStorage for now
     const existingCart = JSON.parse(localStorage.getItem('cart') || '[]');
     const existingItemIndex = existingCart.findIndex(item => item.id === product.id_product);
     
@@ -152,9 +150,7 @@ const ProductDetail = () => {
       return;
     }
 
-    // Add to cart first
     handleAddToCart();
-    // Then navigate to checkout
     navigate('/cart');
   };
 
@@ -169,8 +165,8 @@ const ProductDetail = () => {
     return (
       <div className="product-detail-page">
         <div className="container">
-          <div className="loading-container">
-            <div className="loading-spinner"></div>
+          <div className="detail-loading-container">
+            <div className="detail-loading-spinner"></div>
             <p>Đang tải thông tin sản phẩm...</p>
           </div>
         </div>
@@ -183,10 +179,10 @@ const ProductDetail = () => {
     return (
       <div className="product-detail-page">
         <div className="container">
-          <div className="error-container">
+          <div className="detail-error-container">
             <h2>❌ Lỗi</h2>
             <p>{error}</p>
-            <button onClick={() => navigate('/products')} className="btn-back">
+            <button onClick={() => navigate('/products')} className="detail-btn-back">
               Quay lại danh sách sản phẩm
             </button>
           </div>
@@ -200,10 +196,10 @@ const ProductDetail = () => {
     return (
       <div className="product-detail-page">
         <div className="container">
-          <div className="error-container">
+          <div className="detail-error-container">
             <h2>🔍 Không tìm thấy sản phẩm</h2>
             <p>Sản phẩm bạn tìm kiếm không tồn tại hoặc đã bị xóa.</p>
-            <button onClick={() => navigate('/products')} className="btn-back">
+            <button onClick={() => navigate('/products')} className="detail-btn-back">
               Quay lại danh sách sản phẩm
             </button>
           </div>
@@ -218,12 +214,12 @@ const ProductDetail = () => {
     <div className="product-detail-page">
       <div className="container">
         {/* Back Button */}
-        <button onClick={() => navigate(-1)} className="back-button">
+        <button onClick={() => navigate(-1)} className="detail-back-button">
           <FiArrowLeft /> Quay lại
         </button>
 
         {/* Breadcrumb */}
-        <div className="breadcrumb">
+        <div className="detail-breadcrumb">
           <a href="/">Trang chủ</a>
           <span> &gt; </span>
           <a href="/products">Sản phẩm</a>
@@ -235,10 +231,10 @@ const ProductDetail = () => {
           <span>{product.name}</span>
         </div>
         
-        <div className="product-detail-container">
+        <div className="detail-main-container">
           {/* Product Images */}
-          <div className="product-image-container">
-            <div className="main-image">
+          <div className="detail-image-section">
+            <div className="detail-main-image">
               <img 
                 src={product.image || meoFallback} 
                 alt={product.name}
@@ -248,79 +244,76 @@ const ProductDetail = () => {
                 }}
               />
             </div>
-            {/* Additional images could be added here in the future */}
           </div>
           
           {/* Product Info */}
-          <div className="product-info">
+          <div className="detail-product-info">
             {/* Category Badge */}
-            <div className="category-badge" style={{ backgroundColor: getCategoryColor(product.category?.name) }}>
+            <div className="detail-category-badge" style={{ backgroundColor: getCategoryColor(product.category?.name) }}>
               {product.category?.name || 'Chưa phân loại'}
             </div>
 
             {/* Product Name */}
-            <h1 className="product-name">{product.name}</h1>
+            <h1 className="detail-product-name">{product.name}</h1>
             
             {/* Product Meta Info */}
-            <div className="product-meta-info">
-              <div className="meta-item">
-                <FiCalendar className="meta-icon" />
+            <div className="detail-meta-info">
+              <div className="detail-meta-item">
+                <FiCalendar className="detail-meta-icon" />
                 <span>Đăng ngày: {formatDate(product.date)}</span>
               </div>
-              <div className="meta-item">
-                <FiUser className="meta-icon" />
+              <div className="detail-meta-item">
+                <FiUser className="detail-meta-icon" />
                 <span>Người bán: {product.user?.name_display || 'Ẩn danh'}</span>
               </div>
               {product.user?.location && (
-                <div className="meta-item">
-                  <FiMapPin className="meta-icon" />
+                <div className="detail-meta-item">
+                  <FiMapPin className="detail-meta-icon" />
                   <span>Địa điểm: {product.user.location}</span>
                 </div>
               )}
             </div>
 
             {/* Product Status */}
-            <div className="product-status-badge" style={{ backgroundColor: statusInfo.color }}>
+            <div className="detail-status-badge" style={{ backgroundColor: statusInfo.color }}>
               {statusInfo.text}
             </div>
             
             {/* Product Price */}
-            <div className="product-price">
-              <span className="current-price">{formatPrice(product.price)}</span>
+            <div className="detail-product-price">
+              <span className="detail-current-price">{formatPrice(product.price)}</span>
             </div>
             
-       
-            
             {/* Product Actions */}
-            <div className="product-actions">
+            <div className="detail-product-actions">
               {product.status === 'active' ? (
                 <>
-                  <button className="add-to-cart-btn" onClick={handleAddToCart}>
+                  <button className="detail-add-to-cart-btn" onClick={handleAddToCart}>
                     <FiShoppingCart /> Thêm vào giỏ
                   </button>
-                  <button className="buy-now-btn" onClick={handleBuyNow}>
+                  <button className="detail-buy-now-btn" onClick={handleBuyNow}>
                     Mua ngay
                   </button>
                 </>
               ) : (
-                <button className="contact-seller-btn" onClick={handleContactSeller}>
+                <button className="detail-contact-seller-btn" onClick={handleContactSeller}>
                   <FiUser /> Liên hệ người bán
                 </button>
               )}
             </div>
             
             {/* Product Policies */}
-            <div className="product-policies">
-              <div className="policy-item">
-                <FiTruck className="policy-icon" />
+            <div className="detail-product-policies">
+              <div className="detail-policy-item">
+                <FiTruck className="detail-policy-icon" />
                 <span>Giao hàng tận nơi</span>
               </div>
-              <div className="policy-item">
-                <FiShield className="policy-icon" />
+              <div className="detail-policy-item">
+                <FiShield className="detail-policy-icon" />
                 <span>Hỗ trợ đổi trả</span>
               </div>
-              <div className="policy-item">
-                <FiCheck className="policy-icon" />
+              <div className="detail-policy-item">
+                <FiCheck className="detail-policy-icon" />
                 <span>Sản phẩm chính hãng</span>
               </div>
             </div>
@@ -328,18 +321,18 @@ const ProductDetail = () => {
         </div>
         
         {/* Product Description */}
-        <div className="product-description-container">
+        <div className="detail-description-container">
           <h2>Mô tả sản phẩm</h2>
-          <div className="product-description">
+          <div className="detail-product-description">
             <p>{product.description || 'Chưa có mô tả chi tiết cho sản phẩm này.'}</p>
             
             {/* Seller Information */}
-            <div className="seller-info">
+            <div className="detail-seller-info">
               <h3>Thông tin người bán</h3>
-              <div className="seller-details">
+              <div className="detail-seller-details">
                 <p><strong>Tên:</strong> {product.user?.name_display || 'Ẩn danh'}</p>
                 {product.user?.location && <p><strong>Địa chỉ:</strong> {product.user.location}</p>}
-                <button className="contact-seller-btn" onClick={handleContactSeller}>
+                <button className="detail-contact-seller-btn" onClick={handleContactSeller}>
                   Liên hệ người bán
                 </button>
               </div>
