@@ -365,7 +365,7 @@ const ProductList = () => {
               <div className={`products-display ${viewMode}`}>
                 {products.map((product) => (
                   <div key={product.id_product} className="product-item">
-                    <ProductCard product={product} />
+                    <ProductCard product={product} showSellerInfo={true} />
                   </div>
                 ))}
               </div>

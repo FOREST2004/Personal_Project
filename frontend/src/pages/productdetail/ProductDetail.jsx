@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FiMinus, FiPlus, FiShoppingCart, FiTruck, FiShield, FiCheck, FiArrowLeft, FiMapPin, FiUser, FiCalendar } from 'react-icons/fi';
+import { FiMinus, FiPlus, FiShoppingCart, FiTruck, FiShield, FiCheck, FiArrowLeft, FiMapPin, FiUser, FiCalendar, FiPhone, FiMail, FiMessageCircle } from 'react-icons/fi';
 import './ProductDetail.css';
 import meoFallback from '../../assets/meo.jpg';
 import { productService } from '../../services/productService';
@@ -70,8 +70,8 @@ const ProductDetail = () => {
     switch (status) {
       case 'active':
         return { text: 'Còn hàng', color: '#00a699' };
-      case 'out_of_stock':
-        return { text: 'Hết hàng', color: '#ff5722' };
+      case 'sold':
+        return { text: 'Đã bán', color: '#ff5722' };
       case 'inactive':
         return { text: 'Ngừng bán', color: '#9e9e9e' };
       default:
@@ -156,8 +156,13 @@ const ProductDetail = () => {
 
   // Contact seller
   const handleContactSeller = () => {
-    const sellerInfo = product.user || {};
-    alert(`Liên hệ với ${sellerInfo.name_display || 'Người bán'}\nEmail: ${sellerInfo.email || 'N/A'}\nSĐT: ${sellerInfo.phone || 'N/A'}\nĐịa chỉ: ${sellerInfo.location || 'N/A'}`);
+    const sellerInfo = product.seller || product.user || {};
+    const sellerName = sellerInfo.name_display || 'Người bán';
+    const sellerPhone = sellerInfo.numberphone || sellerInfo.phone || 'N/A';
+    const sellerEmail = sellerInfo.email || 'N/A';
+    const sellerLocation = sellerInfo.location || 'N/A';
+    
+    alert(`Liên hệ với ${sellerName}\nEmail: ${sellerEmail}\nSĐT: ${sellerPhone}\nĐịa chỉ: ${sellerLocation}`);
   };
 
   // Loading state
@@ -264,12 +269,12 @@ const ProductDetail = () => {
               </div>
               <div className="detail-meta-item">
                 <FiUser className="detail-meta-icon" />
-                <span>Người bán: {product.user?.name_display || 'Ẩn danh'}</span>
+                <span>Người bán: {product.seller?.name_display || product.user?.name_display || 'Chưa cập nhật'}</span>
               </div>
-              {product.user?.location && (
+              {(product.seller?.location || product.user?.location) && (
                 <div className="detail-meta-item">
                   <FiMapPin className="detail-meta-icon" />
-                  <span>Địa điểm: {product.user.location}</span>
+                  <span>Địa điểm: {product.seller?.location || product.user?.location}</span>
                 </div>
               )}
             </div>
@@ -330,12 +335,19 @@ const ProductDetail = () => {
             <div className="detail-seller-info">
               <h3>Thông tin người bán</h3>
               <div className="detail-seller-details">
-                <p><strong>Tên:</strong> {product.user?.name_display || 'Ẩn danh'}</p>
-                <p><strong>SĐT:</strong> {product.user?.numberphone || 'Chưa cập nhật'}</p>
-                {product.user?.location && <p><strong>Địa chỉ:</strong> {product.user.location}</p>}
-                <button className="detail-contact-seller-btn" onClick={handleContactSeller}>
-                  Liên hệ người bán
-                </button>
+                <div className="detail-seller-content">
+                  <p><strong>Tên:</strong> {product.seller?.name_display || product.user?.name_display || 'Chưa cập nhật'}</p>
+                  <p><strong>SĐT:</strong> {product.seller?.numberphone || product.user?.numberphone || 'Chưa cập nhật'}</p>
+                  <p><strong>Email:</strong> {product.seller?.email || product.user?.email || 'Chưa cập nhật'}</p>
+                  {(product.seller?.location || product.user?.location) && (
+                    <p><strong>Địa chỉ:</strong> {product.seller?.location || product.user?.location}</p>
+                  )}
+                </div>
+                <div className="detail-seller-actions">
+                  <button className="detail-contact-seller-btn" onClick={handleContactSeller}>
+                    Liên hệ người bán
+                  </button>
+                </div>
               </div>
             </div>
           </div>

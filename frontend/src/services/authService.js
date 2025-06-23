@@ -77,4 +77,14 @@ export const authService = {
   //     return null;
   //   }
   // }
+  
+  // Thêm function mới để lấy thống kê commercial user
+  getCommercialStats: async () => {
+    try {
+      const response = await api.get('/auth/commercial-stats');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 };

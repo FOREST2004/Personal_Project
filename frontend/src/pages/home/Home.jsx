@@ -219,7 +219,7 @@ const Home = () => {
         {featuredProducts.length > 0 ? (
           <div className="products-grid">
             {featuredProducts.map(product => (
-              <ProductCard key={product.id_product} product={product} />
+              <ProductCard key={product.id_product} product={product} showSellerInfo={true} />
             ))}
           </div>
         ) : (
@@ -233,7 +233,7 @@ const Home = () => {
         {newProducts.length > 0 ? (
           <div className="products-grid">
             {newProducts.map(product => (
-              <ProductCard key={product.id_product} product={product} />
+              <ProductCard key={product.id_product} product={product} showSellerInfo={true} />
             ))}
           </div>
         ) : (

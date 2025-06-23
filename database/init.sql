@@ -21,7 +21,7 @@ DROP TYPE IF EXISTS order_status CASCADE;
 
 -- Các ENUM types
 CREATE TYPE user_status AS ENUM ('active', 'inactive', 'banned');
-CREATE TYPE product_status AS ENUM ('active', 'inactive', 'out_of_stock');
+CREATE TYPE product_status AS ENUM ('active', 'sold', 'inactive');
 CREATE TYPE user_role AS ENUM ('admin', 'commercial_user', 'user');
 CREATE TYPE order_status AS ENUM ('pending', 'ordered', 'shipping', 'cancelled', 'delivered');
 
@@ -79,6 +79,146 @@ CREATE TABLE orders (
     id_product INTEGER REFERENCES products(id_product) ON DELETE CASCADE
 );
 
+
+
+
+
+
+
+
+
+-- Function để cập nhật thống kê cho commercial users
+CREATE OR REPLACE FUNCTION update_commercial_user_stats(user_id INTEGER)
+RETURNS VOID AS $$
+BEGIN
+    -- Chỉ cập nhật cho commercial users
+    IF EXISTS (SELECT 1 FROM users WHERE id_user = user_id AND role = 'commercial_user') THEN
+        UPDATE users SET
+            -- Tính tổng số sản phẩm đang active
+            total_active_products = (
+                SELECT COUNT(*)
+                FROM products
+                WHERE id_user_sell = user_id AND status = 'active'
+            ),
+            -- Tính tổng số sản phẩm đã bán (có buyer)
+            total_products_sold = (
+                SELECT COUNT(*)
+                FROM products
+                WHERE id_user_sell = user_id AND status = 'sold'
+            ),
+            -- Tính tổng số sản phẩm đã inactive
+            total_inactive_products = (
+                SELECT COUNT(*)
+                FROM products
+                WHERE id_user_sell = user_id AND status = 'inactive'
+            ),
+            -- Tính tổng doanh thu từ các sản phẩm đã bán
+            total_revenue = (
+                SELECT COALESCE(SUM(price), 0)
+                FROM products
+                WHERE id_user_sell = user_id AND status = 'sold'
+            ),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id_user = user_id;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger function cho khi thêm/sửa/xóa sản phẩm
+CREATE OR REPLACE FUNCTION trigger_update_seller_stats()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Khi INSERT hoặc UPDATE
+    IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
+        -- Cập nhật stats cho seller
+        PERFORM update_commercial_user_stats(NEW.id_user_sell);
+        
+        -- Nếu là UPDATE và seller thay đổi, cập nhật cả seller cũ
+        IF TG_OP = 'UPDATE' AND OLD.id_user_sell != NEW.id_user_sell THEN
+            PERFORM update_commercial_user_stats(OLD.id_user_sell);
+        END IF;
+        
+        RETURN NEW;
+    END IF;
+    
+    -- Khi DELETE
+    IF TG_OP = 'DELETE' THEN
+        PERFORM update_commercial_user_stats(OLD.id_user_sell);
+        RETURN OLD;
+    END IF;
+    
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Tạo trigger cho bảng products
+DROP TRIGGER IF EXISTS products_stats_trigger ON products;
+CREATE TRIGGER products_stats_trigger
+    AFTER INSERT OR UPDATE OR DELETE ON products
+    FOR EACH ROW
+    EXECUTE FUNCTION trigger_update_seller_stats();
+
+-- Function để cập nhật stats khi user role thay đổi
+CREATE OR REPLACE FUNCTION trigger_update_user_role()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Nếu user được chuyển thành commercial_user, tính toán stats
+    IF NEW.role = 'commercial_user' AND OLD.role != 'commercial_user' THEN
+        PERFORM update_commercial_user_stats(NEW.id_user);
+    END IF;
+    
+    -- Nếu user không còn là commercial_user, reset stats về NULL
+    IF NEW.role != 'commercial_user' AND OLD.role = 'commercial_user' THEN
+        UPDATE users SET
+            total_revenue = NULL,
+            total_products_sold = NULL,
+            total_active_products = NULL,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id_user = NEW.id_user;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Tạo trigger cho bảng users
+DROP TRIGGER IF EXISTS users_role_trigger ON users;
+CREATE TRIGGER users_role_trigger
+    AFTER UPDATE OF role ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION trigger_update_user_role();
+
+-- Cập nhật lại stats cho tất cả commercial users hiện tại
+DO $$
+DECLARE
+    user_record RECORD;
+BEGIN
+    FOR user_record IN SELECT id_user FROM users WHERE role = 'commercial_user' LOOP
+        PERFORM update_commercial_user_stats(user_record.id_user);
+    END LOOP;
+END;
+$$;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 -- Tạo dữ liệu mẫu cho TẤT CẢ users (regular + commercial)
 INSERT INTO users (username, password, name_display, email, numberphone, location, wallet, role, total_revenue, total_products_sold, total_active_products) VALUES 
 -- Regular users (admin + user)
@@ -92,11 +232,11 @@ INSERT INTO users (username, password, name_display, email, numberphone, locatio
 ('dogcat', crypt('dogcat123', gen_salt('bf')), 'Dog & Cat', 'dogcat@example.com', '0934567801', 'Long Xuyên', 4000000, 'user', NULL, NULL, NULL),
 
 -- Commercial users (với thống kê)
-('seller1', crypt('seller123', gen_salt('bf')), 'Người Bán Pet 1', 'seller1@example.com', '0945678901', 'Hải Phòng', 8000000, 'commercial_user', 25000000, 15, 8),
-('seller2', crypt('seller234', gen_salt('bf')), 'Người Bán Pet 2', 'seller2@example.com', '0956789012', 'Cần Thơ', 12000000, 'commercial_user', 18000000, 12, 6),
-('shop_cho', crypt('shop123', gen_salt('bf')), 'Shop Chó Cưng', 'shop.cho@example.com', '0967890123', 'Thủ Dầu Một', 20000000, 'commercial_user', 45000000, 28, 12),
-('shop_meo', crypt('shop234', gen_salt('bf')), 'Shop Mèo Xinh', 'shop.meo@example.com', '0978901234', 'Vũng Tàu', 15000000, 'commercial_user', 32000000, 22, 10),
-('petcare', crypt('care123', gen_salt('bf')), 'Pet Care Center', 'petcare@example.com', '0989012345', 'Huế', 18000000, 'commercial_user', 38000000, 25, 15);
+('seller1', crypt('seller123', gen_salt('bf')), 'Người Bán Pet 1', 'seller1@example.com', '0945678901', 'Hải Phòng', 8000000, 'commercial_user', NULL, NULL, NULL),
+('seller2', crypt('seller234', gen_salt('bf')), 'Người Bán Pet 2', 'seller2@example.com', '0956789012', 'Cần Thơ', 12000000, 'commercial_user', NULL, NULL, NULL),
+('shop_cho', crypt('shop123', gen_salt('bf')), 'Shop Chó Cưng', 'shop.cho@example.com', '0967890123', 'Thủ Dầu Một', 20000000, 'commercial_user', NULL, NULL, NULL),
+('shop_meo', crypt('shop234', gen_salt('bf')), 'Shop Mèo Xinh', 'shop.meo@example.com', '0978901234', 'Vũng Tàu', 15000000, 'commercial_user', NULL, NULL, NULL),
+('petcare', crypt('care123', gen_salt('bf')), 'Pet Care Center', 'petcare@example.com', '0989012345', 'Huế', 18000000, 'commercial_user', NULL, NULL, NULL);
 
 -- Tạo dữ liệu mẫu cho Category
 INSERT INTO categories (name) VALUES
@@ -130,13 +270,13 @@ INSERT INTO products (name, price, description, image, status, id_user_sell, id_
 -- Sản phẩm thuộc danh mục Cá
 ('Cá Betta Halfmoon', 200000, 'Cá Betta Halfmoon đực, màu xanh đỏ rực rỡ, đuôi dài đẹp, khoảng 4 tháng tuổi.', 'betta_halfmoon.jpg', 'active', 13, NULL, 3),  -- petcare
 ('Cá Vàng Oranda', 500000, 'Cá Vàng Oranda cap đỏ, kích thước 10-12cm, rất khỏe mạnh và bắt mắt.', 'oranda_goldfish.jpg', 'active', 13, 8, 3),  -- petcare -> dogcat
-('Cá Koi Nhật', 2000000, 'Cá Koi Nhật Bản nhập khẩu, kích thước 20-25cm, hoa văn đẹp, phù hợp nuôi hồ lớn.', 'koi_fish.jpg', 'active', 9, NULL, 3),  -- seller1
+('Cá Koi Nhật', 2000000, 'Cá Koi Nhật Bản nhập khẩu, kích thước 20-25cm, hoa văn đẹp, phù hợp nuôi hồ lớn.', 'koi_fish.jpg', 'inactive', 9, NULL, 3),  -- seller1
 ('Cá Đĩa Wild', 1500000, 'Cá Đĩa (Discus) hoang dã, màu đỏ tự nhiên, kích thước 12-15cm, đã thuần hóa.', 'discus_fish.jpg', 'active', 10, NULL, 3),  -- seller2
-('Cá Rồng', 5000000, 'Cá Rồng Bạch Kim (Platinum Arowana), dài 30cm, đã có giấy CITES, rất quý hiếm.', 'arowana.jpg', 'out_of_stock', 13, NULL, 3),  -- petcare
+('Cá Rồng', 5000000, 'Cá Rồng Bạch Kim (Platinum Arowana), dài 30cm, đã có giấy CITES, rất quý hiếm.', 'arowana.jpg', 'active', 13, NULL, 3),  -- petcare
 
 -- Sản phẩm thuộc danh mục Chim
 ('Chim Vẹt Sun Conure', 15000000, 'Chim Vẹt Sun Conure 1 tuổi, màu sắc rực rỡ, đã thuần, biết nói vài từ đơn giản.', 'sun_conure.jpg', 'active', 10, NULL, 4),  -- seller2
-('Chim Sáo Đen', 2000000, 'Chim Sáo Đen 8 tháng tuổi, đã biết hót và nói chuyện, rất thông minh.', 'mynah_bird.jpg', 'active', 9, 4, 4),  -- seller1 -> user1
+('Chim Sáo Đen', 2000000, 'Chim Sáo Đen 8 tháng tuổi, đã biết hót và nói chuyện, rất thông minh.', 'mynah_bird.jpg', 'sold', 9, 4, 4),  -- seller1 -> user1
 ('Chim Yến Phụng', 1000000, 'Chim Yến Phụng, màu vàng đỏ, hót hay, khoảng 6 tháng tuổi.', 'canary.jpg', 'active', 12, NULL, 4),  -- shop_meo
 ('Chim Họa Mi', 1500000, 'Chim Họa Mi trống, hót cực hay, đã được huấn luyện kỹ, khoảng 1 năm tuổi.', 'nightingale.jpg', 'active', 13, NULL, 4),  -- petcare
 ('Chim Vành Khuyên', 800000, 'Chim Vành Khuyên mái, giọng hót trong trẻo, khoảng 9 tháng tuổi.', 'finch_bird.jpg', 'active', 13, 5, 4),  -- petcare -> user2
@@ -146,7 +286,7 @@ INSERT INTO products (name, price, description, image, status, id_user_sell, id_
 ('Sóc Nhật', 1200000, 'Sóc Nhật Bản, màu xám trắng, rất tăng động và dễ nuôi.', 'japanese_squirrel.jpg', 'active', 9, 6, 5),  -- seller1 -> petlover
 ('Sóc Đất', 900000, 'Sóc Đất, màu nâu vàng, hiền lành, đã được huấn luyện cơ bản.', 'ground_squirrel.jpg', 'active', 10, NULL, 5),  -- seller2
 ('Sóc Siberia', 1800000, 'Sóc Siberia lông dày, màu xám bạc, rất quý hiếm, khoảng 8 tháng tuổi.', 'siberian_squirrel.jpg', 'inactive', 10, NULL, 5),  -- seller2
-('Sóc Flying Squirrel', 2200000, 'Sóc Bay (Flying Squirrel), có màng bay, màu đen tuyền, rất hiếm.', 'flying_squirrel.jpg', 'out_of_stock', 11, NULL, 5),  -- shop_cho
+('Sóc Flying Squirrel', 2200000, 'Sóc Bay (Flying Squirrel), có màng bay, màu đen tuyền, rất hiếm.', 'flying_squirrel.jpg', 'active', 11, NULL, 5),  -- shop_cho
 
 -- Sản phẩm thuộc danh mục Thức ăn thú cưng
 ('Thức ăn hạt cho chó Royal Canin', 850000, 'Thức ăn hạt cao cấp cho chó Royal Canin, bao 10kg, dành cho chó trưởng thành mọi giống.', 'royal_canin.jpg', 'active', 11, NULL, 6),  -- shop_cho
@@ -208,3 +348,5 @@ INSERT INTO orders (status, order_date, id_buyer, id_seller, id_product) VALUES
 -- Đơn hàng bị hủy
 ('cancelled', '2025-06-18 14:00:00', 6, 10, 14),  -- petlover hủy đơn Cá Đĩa từ seller2
 ('cancelled', '2025-06-17 16:30:00', 7, 11, 26);  -- animalfriend hủy đơn Thức ăn Royal Canin từ shop_cho
+
+-- Thêm vào cuối file init.sql, sau phần INSERT orders

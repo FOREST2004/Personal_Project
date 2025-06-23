@@ -104,3 +104,13 @@
   font-size: 0.8rem;
   font-weight: normal;
 }
+
+.card-seller {
+  margin: 8px 0;
+  color: var(--gray-color);
+  font-size: 0.85rem;
+}
+
+.card-seller span {
+  font-weight: 500;
+}

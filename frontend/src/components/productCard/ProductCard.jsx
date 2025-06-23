@@ -3,7 +3,7 @@ import { FiStar } from 'react-icons/fi';
 import './ProductCard.css';
 import meoFallback from '../../assets/meo.jpg';
 
-const ProductCard = ({ product }) => {
+const ProductCard = ({ product, showSellerInfo = false, showBuyerInfo = false }) => {
   // Format price to VND
   const formatPrice = (price) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
@@ -30,6 +30,15 @@ const ProductCard = ({ product }) => {
       <div className="card-content">
         <h3 className="card-title">{product.name}</h3>
         
+        {/* Hiển thị thông tin seller nếu có */}
+        {showSellerInfo && product.seller && (
+          <div className="card-seller">
+            <span>Người bán: {product.seller.name_display}</span>
+          </div>
+        )}
+        
+
+        
         <div className="card-post-date">
           <span>Ngày đăng: {formatDate(product.date)}</span>
         </div>
@@ -37,7 +46,7 @@ const ProductCard = ({ product }) => {
         <div className="card-availability">
           <span>
             {product.status === 'active' ? 'Còn hàng' :
-              product.status === 'out_of_stock' ? 'Hết hàng' :
+              product.status === 'sold' ? 'Đã bán' :
                 'Không khả dụng'}
           </span>
         </div>

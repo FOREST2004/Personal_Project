@@ -10,4 +10,7 @@ router.get('/profile', protect, authController.getProfile);
 router.put('/profile', protect, authController.updateProfile);
 router.put('/change-password', protect, authController.changePassword);
 
+// Sửa lỗi: thay authMiddleware thành protect
+router.get('/commercial-stats', protect, authController.getCommercialStats);
+
 module.exports = router;

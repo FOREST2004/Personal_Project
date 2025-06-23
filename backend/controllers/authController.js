@@ -161,3 +161,31 @@ exports.changePassword = async (req, res) => {
     });
   }
 };
+
+// Thêm endpoint để lấy thống kê commercial user
+exports.getCommercialStats = async (req, res) => {
+  try {
+    const userId = req.user.id_user;
+    
+    if (req.user.role !== 'commercial_user') {
+      return res.status(403).json({
+        status: 'fail',
+        message: 'Chỉ commercial user mới có thể xem thống kê'
+      });
+    }
+    
+    const stats = await User.getCommercialUserStats(userId);
+    
+    res.status(200).json({
+      status: 'success',
+      data: stats
+    });
+  } catch (error) {
+    console.error('Error in getCommercialStats:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Lỗi khi lấy thống kê',
+      error: error.message
+    });
+  }
+};

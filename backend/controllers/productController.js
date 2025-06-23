@@ -78,6 +78,15 @@ exports.getProductsByCategory = async (req, res) => {
 exports.createProduct = async (req, res) => {
   try {
     const userId = req.user ? req.user.id_user : 1;
+    
+    // Kiểm tra quyền tạo sản phẩm (chỉ commercial_user và admin)
+    if (req.user && req.user.role === 'user') {
+      return res.status(403).json({
+        status: 'fail',
+        message: 'Chỉ người bán hàng mới có thể tạo sản phẩm'
+      });
+    }
+    
     const newProduct = await Product.createProduct(req.body, userId);
     
     res.status(201).json({
@@ -89,6 +98,37 @@ exports.createProduct = async (req, res) => {
     res.status(500).json({
       status: 'error',
       message: 'Lỗi khi tạo sản phẩm',
+      error: error.message
+    });
+  }
+};
+
+// Thêm endpoint để lấy sản phẩm của seller
+exports.getSellerProducts = async (req, res) => {
+  try {
+    const sellerId = req.params.sellerId || (req.user ? req.user.id_user : null);
+
+    
+    // Không set status mặc định cho seller products
+    const filters = { ...req.query };
+    delete filters.status; // Xóa status filter để lấy tất cả sản phẩm
+    
+    const result = await Product.findBySeller(sellerId, {
+      filters: filters,
+      sort: req.query.sort
+    });
+    
+
+    
+    res.status(200).json({
+      status: 'success',
+      data: result
+    });
+  } catch (error) {
+  
+    res.status(500).json({
+      status: 'error',
+      message: 'Lỗi khi lấy sản phẩm của người bán',
       error: error.message
     });
   }

@@ -11,57 +11,65 @@ class Product extends BaseModel {
   // Lấy tất cả sản phẩm với filter và join
   async findAllWithDetails(filters = {}, options = {}) {
     try {
-      const { page = 1, limit = 10, category, search, minPrice, maxPrice, status = 'active', userId } = filters;
+      const { page = 1, limit = 10, category, search, minPrice, maxPrice, status, userId, sellerId } = filters;
       const { sort = 'newest' } = options;
       const offset = (page - 1) * limit;
 
+  
       // Xây dựng câu truy vấn SQL cơ bản
       let sqlQuery = `
-        SELECT p.*, c.name as category_name, u.name_display as user_name, u.location as user_location
+        SELECT p.*, c.name as category_name, 
+               seller.name_display as seller_name, seller.location as seller_location,
+               buyer.name_display as buyer_name
         FROM products p
         LEFT JOIN categories c ON p.id_category = c.id_category
-        LEFT JOIN users u ON p.id_user = u.id_user
+        LEFT JOIN users seller ON p.id_user_sell = seller.id_user
+        LEFT JOIN users buyer ON p.id_user_buy = buyer.id_user
         WHERE 1=1
       `;
-
+  
       const queryParams = [];
-
+  
       // Thêm điều kiện tìm kiếm
       if (status) {
         queryParams.push(status);
         sqlQuery += ` AND p.status = $${queryParams.length}`;
       }
-
+  
       if (category) {
         queryParams.push(category);
         sqlQuery += ` AND p.id_category = $${queryParams.length}`;
       }
-
+  
       if (search) {
         queryParams.push(`%${search}%`);
         sqlQuery += ` AND (p.name ILIKE $${queryParams.length} OR p.description ILIKE $${queryParams.length})`;
       }
-
+  
       if (minPrice) {
         queryParams.push(minPrice);
         sqlQuery += ` AND p.price >= $${queryParams.length}`;
       }
-
+  
       if (maxPrice) {
         queryParams.push(maxPrice);
         sqlQuery += ` AND p.price <= $${queryParams.length}`;
       }
-
-      if (userId) {
-        queryParams.push(userId);
-        sqlQuery += ` AND p.id_user = $${queryParams.length}`;
+  
+      // Tìm theo seller (thay thế userId cũ)
+      if (sellerId || userId) {
+        queryParams.push(sellerId || userId);
+        sqlQuery += ` AND p.id_user_sell = $${queryParams.length}`;
+        console.log('🔍 findAllWithDetails - Added seller condition for:', sellerId || userId);
       }
-
+      
+  
       // Đếm tổng số sản phẩm
       const countQuery = `SELECT COUNT(*) FROM (${sqlQuery}) AS count_table`;
       const countResult = await query(countQuery, queryParams);
       const totalCount = parseInt(countResult.rows[0].count);
-
+      console.log('🔍 findAllWithDetails - Total count:', totalCount);
+  
       // Thêm ORDER BY
       switch(sort) {
         case 'price_asc':
@@ -85,16 +93,16 @@ class Product extends BaseModel {
         default:
           sqlQuery += ` ORDER BY p.date DESC`;
       }
-
+  
       // Thêm LIMIT và OFFSET
       queryParams.push(parseInt(limit));
       sqlQuery += ` LIMIT $${queryParams.length}`;
       
       queryParams.push(parseInt(offset));
       sqlQuery += ` OFFSET $${queryParams.length}`;
-
+  
       const result = await query(sqlQuery, queryParams);
-
+  
       // Format dữ liệu trả về
       const products = result.rows.map(row => ({
         id_product: row.id_product,
@@ -104,26 +112,31 @@ class Product extends BaseModel {
         image: row.image,
         status: row.status,
         date: row.date,
-        id_user: row.id_user,
+        id_user_sell: row.id_user_sell,
+        id_user_buy: row.id_user_buy,
         id_category: row.id_category,
         category: {
           id_category: row.id_category,
           name: row.category_name
         },
-        user: {
-          id_user: row.id_user,
-          name_display: row.user_name,
-          location: row.user_location
-        }
+        seller: {
+          id_user: row.id_user_sell,
+          name_display: row.seller_name,
+          location: row.seller_location
+        },
+        buyer: row.id_user_buy ? {
+          id_user: row.id_user_buy,
+          name_display: row.buyer_name
+        } : null
       }));
-
+  
       return {
         products,
         pagination: {
-          currentPage: parseInt(page),
+          currentPage: page,
           totalPages: Math.ceil(totalCount / limit),
-          totalCount,
-          limit: parseInt(limit)
+          totalItems: totalCount,
+          itemsPerPage: limit
         }
       };
     } catch (error) {
@@ -131,23 +144,25 @@ class Product extends BaseModel {
     }
   }
 
-  // Lấy sản phẩm theo ID với details
+  // Lấy chi tiết sản phẩm
   async findByIdWithDetails(id) {
     try {
-      const sqlQuery = `
-        SELECT p.*, c.name as category_name, u.name_display as user_name, u.email as user_email, u.numberphone as user_numberphone, u.location as user_location
+      const result = await query(`
+        SELECT p.*, c.name as category_name, 
+               seller.name_display as seller_name, seller.email as seller_email, 
+               seller.numberphone as seller_numberphone, seller.location as seller_location,
+               buyer.name_display as buyer_name
         FROM products p
         LEFT JOIN categories c ON p.id_category = c.id_category
-        LEFT JOIN users u ON p.id_user = u.id_user
+        LEFT JOIN users seller ON p.id_user_sell = seller.id_user
+        LEFT JOIN users buyer ON p.id_user_buy = buyer.id_user
         WHERE p.id_product = $1
-      `;
-
-      const result = await query(sqlQuery, [id]);
-      
+      `, [id]);
+  
       if (result.rows.length === 0) {
         return null;
       }
-
+  
       const row = result.rows[0];
       return {
         id_product: row.id_product,
@@ -157,40 +172,36 @@ class Product extends BaseModel {
         image: row.image,
         status: row.status,
         date: row.date,
-        id_user: row.id_user,
+        id_user_sell: row.id_user_sell,
+        id_user_buy: row.id_user_buy,
         id_category: row.id_category,
         category: {
           id_category: row.id_category,
           name: row.category_name
         },
-        user: {
-          id_user: row.id_user,
-          name_display: row.user_name,
-          email: row.user_email,
-          numberphone: row.user_numberphone,
-          location: row.user_location
-        }
+        seller: {
+          id_user: row.id_user_sell,
+          name_display: row.seller_name,
+          email: row.seller_email,
+          numberphone: row.seller_numberphone,
+          location: row.seller_location
+        },
+        buyer: row.id_user_buy ? {
+          id_user: row.id_user_buy,
+          name_display: row.buyer_name
+        } : null
       };
     } catch (error) {
       throw new Error(`Error in findByIdWithDetails: ${error.message}`);
     }
   }
 
-  // Lấy sản phẩm theo category
-  async findByCategory(categoryId, options = {}) {
+  // Lấy sản phẩm của seller
+  async findBySeller(sellerId, options = {}) {
     try {
-      return await this.findAllWithDetails({ category: categoryId, ...options.filters }, options);
+      return await this.findAllWithDetails({ sellerId, ...options.filters }, options);
     } catch (error) {
-      throw new Error(`Error in findByCategory: ${error.message}`);
-    }
-  }
-
-  // Lấy sản phẩm của user
-  async findByUser(userId, options = {}) {
-    try {
-      return await this.findAllWithDetails({ userId, ...options.filters }, options);
-    } catch (error) {
-      throw new Error(`Error in findByUser: ${error.message}`);
+      throw new Error(`Error in findBySeller: ${error.message}`);
     }
   }
 
@@ -198,18 +209,19 @@ class Product extends BaseModel {
   async createProduct(productData, userId) {
     try {
       const { name, price, description, image, id_category } = productData;
-
+  
       const newProduct = await this.create({
         name,
         price: parseFloat(price),
         description,
         image,
         id_category: parseInt(id_category),
-        id_user: userId,
+        id_user_sell: userId, // Thay đổi từ id_user thành id_user_sell
+        id_user_buy: null,    // Khởi tạo null
         status: 'active',
         date: new Date()
       });
-
+  
       return newProduct;
     } catch (error) {
       throw new Error(`Error creating product: ${error.message}`);
@@ -224,12 +236,12 @@ class Product extends BaseModel {
       if (!existingProduct) {
         throw new Error('Sản phẩm không tìm thấy');
       }
-
-      // Kiểm tra quyền cập nhật (chỉ owner hoặc admin)
-      if (userId && userRole !== 'admin' && existingProduct.id_user !== userId) {
+  
+      // Kiểm tra quyền cập nhật (chỉ seller hoặc admin)
+      if (userId && userRole !== 'admin' && existingProduct.id_user_sell !== userId) {
         throw new Error('Bạn không có quyền cập nhật sản phẩm này');
       }
-
+  
       // Chuẩn bị dữ liệu cập nhật
       const updateData = {};
       if (productData.name !== undefined) updateData.name = productData.name;
@@ -238,7 +250,8 @@ class Product extends BaseModel {
       if (productData.image !== undefined) updateData.image = productData.image;
       if (productData.id_category !== undefined) updateData.id_category = parseInt(productData.id_category);
       if (productData.status !== undefined) updateData.status = productData.status;
-
+      if (productData.id_user_buy !== undefined) updateData.id_user_buy = productData.id_user_buy;
+  
       const updatedProduct = await this.update(id, updateData);
       return updatedProduct;
     } catch (error) {
@@ -254,16 +267,39 @@ class Product extends BaseModel {
       if (!existingProduct) {
         throw new Error('Sản phẩm không tìm thấy');
       }
-
-      // Kiểm tra quyền xóa (chỉ owner hoặc admin)
-      if (userId && userRole !== 'admin' && existingProduct.id_user !== userId) {
+  
+      // Kiểm tra quyền xóa (chỉ seller hoặc admin)
+      if (userId && userRole !== 'admin' && existingProduct.id_user_sell !== userId) {
         throw new Error('Bạn không có quyền xóa sản phẩm này');
       }
-
+  
       const deletedProduct = await this.delete(id);
       return deletedProduct;
     } catch (error) {
       throw new Error(`Error deleting product: ${error.message}`);
+    }
+  }
+
+  // Cập nhật người mua sản phẩm
+  async updateProductBuyer(productId, buyerId) {
+    try {
+      const product = await this.findById(productId);
+      if (!product) {
+        throw new Error('Sản phẩm không tồn tại');
+      }
+      
+      if (product.id_user_buy) {
+        throw new Error('Sản phẩm đã được bán');
+      }
+      
+      const updatedProduct = await this.update(productId, {
+        id_user_buy: buyerId,
+        status: 'sold'
+      });
+      
+      return updatedProduct;
+    } catch (error) {
+      throw new Error(`Error updating product buyer: ${error.message}`);
     }
   }
 
@@ -311,6 +347,22 @@ class Product extends BaseModel {
       }, { sort: sortBy });
     } catch (error) {
       throw new Error(`Error searching products: ${error.message}`);
+    }
+  }
+
+  // Lấy sản phẩm theo danh mục
+  async findByCategory(categoryId, options = {}) {
+    try {
+      const { page = 1, limit = 10, sort = 'newest', status = 'active' } = options;
+      
+      return await this.findAllWithDetails({
+        category: categoryId,
+        status,
+        page,
+        limit
+      }, { sort });
+    } catch (error) {
+      throw new Error(`Error in findByCategory: ${error.message}`);
     }
   }
 }

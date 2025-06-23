@@ -23,6 +23,7 @@ router.put('/:id', protect, productController.updateProduct);
 // Xóa sản phẩm (yêu cầu đăng nhập và quyền)
 router.delete('/:id', protect, productController.deleteProduct);
 
-// router.get('/stats', productController.getProductStats);
+// Thêm route cho seller products
+router.get('/seller/:sellerId?', protect, restrictTo('commercial_user'), productController.getSellerProducts);
 
 module.exports = router;

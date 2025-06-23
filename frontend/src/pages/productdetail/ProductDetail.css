@@ -420,6 +420,8 @@
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   border-radius: 12px;
   border: 1px solid var(--border-color);
+  max-width: 400px; /* Thu nhỏ ô lại */
+  width: fit-content; /* Chỉ rộng vừa đủ nội dung */
 }
 
 .detail-seller-info h3 {
@@ -430,6 +432,73 @@
   border-bottom: 2px solid var(--primary-color);
   padding-bottom: 8px;
   display: inline-block;
+  text-align: left;
+}
+
+.detail-seller-details {
+  display: flex;
+  flex-direction: column; /* Đặt theo chiều dọc */
+  gap: 15px;
+}
+
+.detail-seller-content {
+  text-align: left;
+}
+
+.detail-seller-details p {
+  margin-bottom: 8px;
+  color: var(--dark-color);
+  text-align: left;
+  display: block;
+  font-size: 0.95rem;
+}
+
+.detail-seller-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px; /* Khoảng cách từ văn bản */
+}
+
+.detail-contact-seller-btn {
+  background-color: #ff9800;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s;
+  white-space: nowrap;
+  font-size: 0.9rem;
+}
+
+.detail-contact-seller-btn:hover {
+  background-color: #f57c00;
+  transform: translateY(-1px);
+}
+
+/* Responsive cho mobile */
+@media (max-width: 768px) {
+  .detail-seller-info {
+    max-width: 100%;
+    width: 100%;
+  }
+  
+  .detail-seller-details {
+    flex-direction: column;
+  }
+  
+  .detail-seller-actions {
+    margin-top: 15px;
+  }
+  
+  .detail-contact-seller-btn {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 .detail-seller-details p {

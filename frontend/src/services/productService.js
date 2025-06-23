@@ -90,5 +90,64 @@ export const productService = {
         };
       }
     }
+  },
+  
+  // Thêm function để lấy sản phẩm của seller
+  getSellerProducts: async (sellerId, params = {}) => {
+    try {
+      const queryParams = new URLSearchParams({
+        page: params.page || 1,
+        limit: params.limit || 10,
+        ...params
+      }).toString();
+      
+      const response = await api.get(`/products/seller/${sellerId}?${queryParams}`);
+      
+      // API trả về: { status: "success", data: { products: [...], pagination: {...} } }
+      const responseData = response.data?.data || {};
+      
+      return {
+        data: responseData.products || [], // Lấy products từ response.data.data.products
+        totalPages: responseData.pagination?.totalPages || 1,
+        currentPage: responseData.pagination?.currentPage || 1,
+        results: responseData.products?.length || 0
+      };
+    } catch (error) {
+      console.error('Error in getSellerProducts:', error);
+      
+      if (error.response) {
+        throw {
+          message: error.response.data?.message || 'Lỗi khi lấy sản phẩm của người bán',
+          status: error.response.status
+        };
+      } else {
+        throw {
+          message: 'Không thể kết nối đến server',
+          status: 0
+        };
+      }
+    }
+  },
+  
+  // Thêm function để cập nhật buyer cho sản phẩm
+  updateProductBuyer: async (productId, buyerId) => {
+    try {
+      const response = await api.put(`/products/${productId}/buyer`, { buyerId });
+      return response.data;
+    } catch (error) {
+      console.error('Error in updateProductBuyer:', error);
+      
+      if (error.response) {
+        throw {
+          message: error.response.data?.message || 'Lỗi khi cập nhật người mua',
+          status: error.response.status
+        };
+      } else {
+        throw {
+          message: 'Không thể kết nối đến server',
+          status: 0
+        };
+      }
+    }
   }
 };

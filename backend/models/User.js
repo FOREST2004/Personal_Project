@@ -32,32 +32,47 @@ class User extends BaseModel {
   // Tạo user mới với password đã hash
   async createUser(userData) {
     try {
-      const { username, password, name_display, email, numberphone, location, role} = userData;
+      const { username, password, name_display, email, numberphone, location, role } = userData;
       
       // Kiểm tra email đã tồn tại
       const existingUser = await this.findByEmail(email);
       if (existingUser) {
         throw new Error('Email đã được sử dụng');
       }
-
+  
       // Hash password
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
-
-      const newUser = await this.create({
+  
+      // Chuẩn bị dữ liệu user
+      const newUserData = {
         username,
         password: hashedPassword,
         name_display,
         email,
         numberphone,
         location,
-        role,
+        role: role || 'user',
         status: 'active',
         wallet: 0,
         created_at: new Date(),
         updated_at: new Date()
-      });
-
+      };
+  
+      // Nếu là commercial user, khởi tạo các trường thống kê
+      if (role === 'commercial_user') {
+        newUserData.total_revenue = 0;
+        newUserData.total_products_sold = 0;
+        newUserData.total_active_products = 0;
+      } else {
+        // Đối với regular user, set NULL cho các trường commercial
+        newUserData.total_revenue = null;
+        newUserData.total_products_sold = null;
+        newUserData.total_active_products = null;
+      }
+  
+      const newUser = await this.create(newUserData);
+      
       // Loại bỏ password khỏi response
       delete newUser.password;
       return newUser;
@@ -180,6 +195,94 @@ class User extends BaseModel {
       return updatedUser;
     } catch (error) {
       throw new Error(`Error updating wallet: ${error.message}`);
+    }
+  }
+
+  // Thêm method để cập nhật thống kê commercial user
+  async updateCommercialStats(userId, statsData) {
+    try {
+      const { total_revenue, total_products_sold, total_active_products } = statsData;
+      
+      // Kiểm tra user có phải commercial user không
+      const user = await this.findById(userId);
+      if (!user || user.role !== 'commercial_user') {
+        throw new Error('Chỉ có thể cập nhật thống kê cho commercial user');
+      }
+      
+      const updateData = { updated_at: new Date() };
+      if (total_revenue !== undefined) updateData.total_revenue = total_revenue;
+      if (total_products_sold !== undefined) updateData.total_products_sold = total_products_sold;
+      if (total_active_products !== undefined) updateData.total_active_products = total_active_products;
+  
+      const updatedUser = await this.update(userId, updateData);
+      delete updatedUser.password;
+      return updatedUser;
+    } catch (error) {
+      throw new Error(`Error updating commercial stats: ${error.message}`);
+    }
+  }
+
+  // Lấy thống kê chi tiết cho commercial user
+  async getCommercialUserStats(userId) {
+    try {
+      const result = await query(`
+        SELECT 
+          u.total_revenue,
+          u.total_products_sold,
+          u.total_active_products,
+          COUNT(DISTINCT p.id_product) as current_products,
+          COUNT(DISTINCT CASE WHEN p.status = 'active' THEN p.id_product END) as active_products,
+          COUNT(DISTINCT o.id_order) as total_orders
+        FROM users u
+        LEFT JOIN products p ON u.id_user = p.id_user_sell
+        LEFT JOIN orders o ON u.id_user = o.id_seller
+        WHERE u.id_user = $1 AND u.role = 'commercial_user'
+        GROUP BY u.id_user, u.total_revenue, u.total_products_sold, u.total_active_products
+      `, [userId]);
+      
+      return result.rows[0] || null;
+    } catch (error) {
+      throw new Error(`Error getting commercial user stats: ${error.message}`);
+    }
+  }
+
+  // Lấy users theo role với thống kê
+  async findByRoleWithStats(role) {
+    try {
+      let sqlQuery;
+      
+      if (role === 'commercial_user') {
+        sqlQuery = `
+          SELECT 
+            u.id_user, u.username, u.name_display, u.email, u.numberphone, 
+            u.location, u.role, u.status, u.wallet, u.created_at,
+            u.total_revenue, u.total_products_sold, u.total_active_products,
+            COUNT(DISTINCT p.id_product) as current_products,
+            COUNT(DISTINCT CASE WHEN p.status = 'active' THEN p.id_product END) as active_products
+          FROM users u
+          LEFT JOIN products p ON u.id_user = p.id_user_sell
+          WHERE u.role = $1
+          GROUP BY u.id_user
+          ORDER BY u.created_at DESC
+        `;
+      } else {
+        sqlQuery = `
+          SELECT 
+            u.id_user, u.username, u.name_display, u.email, u.numberphone, 
+            u.location, u.role, u.status, u.wallet, u.created_at,
+            COUNT(DISTINCT o.id_order) as total_purchases
+          FROM users u
+          LEFT JOIN orders o ON u.id_user = o.id_buyer
+          WHERE u.role = $1
+          GROUP BY u.id_user
+          ORDER BY u.created_at DESC
+        `;
+      }
+      
+      const result = await query(sqlQuery, [role]);
+      return result.rows;
+    } catch (error) {
+      throw new Error(`Error finding users by role: ${error.message}`);
     }
   }
 }

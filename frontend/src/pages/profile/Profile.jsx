@@ -31,43 +31,81 @@ const Profile = () => {
     newPassword: '',
     confirmPassword: ''
   });
-
-  // Fetch user profile
+  const [commercialStats, setCommercialStats] = useState(null);
+  const [productFilter, setProductFilter] = useState('all'); // Thêm state cho filter
+  
+  // Fetch commercial stats nếu user là commercial_user
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchCommercialStats = async () => {
+      if (user && user.role === 'commercial_user') {
+        try {
+          const response = await authService.getCommercialStats();
+          setCommercialStats(response.data);
+        } catch (error) {
+          console.error('Error fetching commercial stats:', error);
+        }
+      }
+    };
+
+    fetchCommercialStats();
+  }, [user]);
+
+  // Fetch user products when products tab is active
+  useEffect(() => {
+    const fetchProducts = async () => {
+      if (activeTab === 'products' && user) {
+        try {
+          let response;
+          if (user.role === 'commercial_user') {
+            response = await productService.getSellerProducts(user.id_user);
+          } else {
+            response = await productService.getAllProducts();
+          }
+          
+          console.log('API Response:', response);
+          
+          // Sửa cách truy cập dữ liệu
+          if (user.role === 'commercial_user') {
+            console.log('Raw response.data:', response.data);
+            console.log('response.data type:', typeof response.data);
+            console.log('Array.isArray(response.data):', Array.isArray(response.data));
+            
+            // Đối với getSellerProducts: response.data chứa products array trực tiếp
+            const products = response.data || [];
+            console.log('Final products:', products);
+            setUserProducts(Array.isArray(products) ? products : []);
+          } else {
+            // Đối với getAllProducts: response.data là array trực tiếp
+            setUserProducts(Array.isArray(response.data) ? response.data : []);
+          }
+        } catch (error) {
+          console.error('Error fetching products:', error);
+          setUserProducts([]);
+        }
+      }
+    };
+
+    fetchProducts();
+  }, [activeTab, user]);
+
+  // Fetch user profile on component mount
+  useEffect(() => {
+    const fetchUserProfile = async () => {
       try {
         setLoading(true);
         const response = await authService.getProfile();
         setUser(response.data.user);
         setFormData(response.data.user);
       } catch (error) {
-        console.error('Error fetching profile:', error);
-        setError('Không thể tải thông tin profile');
+        console.error('Error fetching user profile:', error);
+        setError('Không thể tải thông tin người dùng');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchProfile();
+    fetchUserProfile();
   }, []);
-
-  // Fetch user products when products tab is active
-  useEffect(() => {
-    const fetchUserProducts = async () => {
-      if (activeTab === 'products' && user) {
-        try {
-          const response = await productService.getAllProducts({
-            userId: user.id_user
-          });
-          setUserProducts(response.data || []);
-        } catch (error) {
-          console.error('Error fetching user products:', error);
-        }
-      }
-    };
-
-    fetchUserProducts();
-  }, [activeTab, user]);
 
   // Handle form input changes
   const handleInputChange = (e) => {
@@ -175,17 +213,54 @@ const Profile = () => {
             {success && <div className="success-message">{success}</div>}
             
             {!editMode ? (
-              // View Mode
               <div>
                 <div className="stats-grid">
-                  <div className="stat-card">
-                    <div className="stat-value">{userProducts.length}</div>
-                    <div className="stat-label">Sản phẩm đã đăng</div>
-                  </div>
-                  <div className="stat-card">
-                    <div className="stat-value">{new Intl.NumberFormat('vi-VN').format(user.wallet || 0)}đ</div>
-                    <div className="stat-label">Số dư ví</div>
-                  </div>
+                  {/* Stats cho user thường */}
+                  {user.role !== 'commercial_user' && (
+                    <>
+                      <div className="stat-card">
+                        <div className="stat-value">{userProducts.length}</div>
+                        <div className="stat-label">Sản phẩm đã đăng</div>
+                      </div>
+                      <div className="stat-card">
+                        <div className="stat-value">{new Intl.NumberFormat('vi-VN').format(user.wallet || 0)}đ</div>
+                        <div className="stat-label">Số dư ví</div>
+                      </div>
+                    </>
+                  )}
+                  
+                  {/* Stats cho commercial user */}
+                  {user.role === 'commercial_user' && commercialStats && (
+                    <>
+                      <div className="stat-card">
+                        <div className="stat-value">{new Intl.NumberFormat('vi-VN').format(commercialStats.total_revenue || 0)}đ</div>
+                        <div className="stat-label">Tổng doanh thu</div>
+                      </div>
+                      <div className="stat-card">
+                        <div className="stat-value"></div>
+                        <div className="stat-label"></div>
+                      </div>
+                      <div className="stat-card">
+                        <div className="stat-value">{new Intl.NumberFormat('vi-VN').format(user.wallet || 0)}đ</div>
+                        <div className="stat-label">Số dư ví</div>
+                      </div>
+                 
+                      <div className="stat-card">
+                        <div className="stat-value">{commercialStats.total_products_sold || 0}</div>
+                        <div className="stat-label">Sản phẩm đã bán</div>
+                      </div>
+                      <div className="stat-card">
+                        <div className="stat-value">{commercialStats.total_active_products || 0}</div>
+                        <div className="stat-label">Sản phẩm đang bán</div>
+                      </div>
+                      <div className="stat-card">
+                        <div className="stat-value">{commercialStats.total_inactive_products || 0}</div>
+                        <div className="stat-label">Sản phẩm đang ngưng bán</div>
+                      </div>
+                   
+                    
+                    </>
+                  )}
                 </div>
 
                 <div className="profile-details">
@@ -389,22 +464,67 @@ const Profile = () => {
         );
 
       case 'products':
+        // Đảm bảo userProducts là array trước khi filter
+        const safeUserProducts = Array.isArray(userProducts) ? userProducts : [];
+        console.log('userProducts in render:', userProducts);
+        console.log('safeUserProducts:', safeUserProducts);
+        console.log('safeUserProducts.length:', safeUserProducts.length);
+        console.log('productFilter:', productFilter);
+        
+        // Lọc sản phẩm theo status
+        const filteredProducts = productFilter === 'all' 
+          ? safeUserProducts 
+          : safeUserProducts.filter(product => product.status === productFilter);
+          
+        console.log('filteredProducts:', filteredProducts);
         return (
           <div className="content-body">
             <div className="user-products">
               <div className="products-header">
-                <h3>Sản phẩm của bạn ({userProducts.length})</h3>
+                <h3>Sản phẩm của bạn ({safeUserProducts.length})</h3>
+                
+                {/* Filter buttons */}
+                <div className="product-filter">
+                  <button 
+                    className={`filter-btn ${productFilter === 'all' ? 'active' : ''}`}
+                    onClick={() => setProductFilter('all')}
+                  >
+                    Tất cả ({userProducts.length})
+                  </button>
+                  <button 
+                    className={`filter-btn ${productFilter === 'active' ? 'active' : ''}`}
+                    onClick={() => setProductFilter('active')}
+                  >
+                    Đang bán ({userProducts.filter(p => p.status === 'active').length})
+                  </button>
+                  <button 
+                    className={`filter-btn ${productFilter === 'sold' ? 'active' : ''}`}
+                    onClick={() => setProductFilter('sold')}
+                  >
+                    Đã bán ({userProducts.filter(p => p.status === 'sold').length})
+                  </button>
+                  <button 
+                    className={`filter-btn ${productFilter === 'inactive' ? 'active' : ''}`}
+                    onClick={() => setProductFilter('inactive')}
+                  >
+                    Tạm dừng ({userProducts.filter(p => p.status === 'inactive').length})
+                  </button>
+                </div>
               </div>
               
-              {userProducts.length > 0 ? (
+              {filteredProducts.length > 0 ? (
                 <div className="products-grid">
-                  {userProducts.map(product => (
+                  {filteredProducts.map(product => (
                     <ProductCard key={product.id_product} product={product} />
                   ))}
                 </div>
               ) : (
                 <div className="no-products">
-                  <p>Bạn chưa đăng sản phẩm nào</p>
+                  {productFilter === 'all' ? (
+                    <p>Bạn chưa đăng sản phẩm nào</p>
+                  ) : (
+                    <p>Không có sản phẩm nào ở trạng thái này</p>
+                  )}
                 </div>
               )}
             </div>
@@ -448,15 +568,17 @@ const Profile = () => {
                 Đổi mật khẩu
               </button>
             </div>
-            <div className="profile-nav-item">
-              <button 
-                className={`profile-nav-link ${activeTab === 'products' ? 'active' : ''}`}
-                onClick={() => setActiveTab('products')}
-              >
-                <FiPackage className="profile-nav-icon" />
-                Sản phẩm của tôi
-              </button>
-            </div>
+            {user.role === 'commercial_user' && (
+              <div className="profile-nav-item">
+                <button 
+                  className={`profile-nav-link ${activeTab === 'products' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('products')}
+                >
+                  <FiPackage className="profile-nav-icon" />
+                  Sản phẩm của tôi
+                </button>
+              </div>
+            )}
           </nav>
         </div>
 
@@ -466,7 +588,7 @@ const Profile = () => {
             <h1 className="content-title">
               {activeTab === 'info' && 'Thông tin cá nhân'}
               {activeTab === 'password' && 'Đổi mật khẩu'}
-              {activeTab === 'products' && 'Sản phẩm của tôi'}
+              {activeTab === 'products' && user.role === 'commercial_user' && 'Sản phẩm của tôi'}
             </h1>
           </div>
           
