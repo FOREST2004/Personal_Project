@@ -32,7 +32,7 @@ class User extends BaseModel {
   // Tạo user mới với password đã hash
   async createUser(userData) {
     try {
-      const { username, password, name_display, email, numberphone, location, role = 'user' } = userData;
+      const { username, password, name_display, email, numberphone, location, role} = userData;
       
       // Kiểm tra email đã tồn tại
       const existingUser = await this.findByEmail(email);

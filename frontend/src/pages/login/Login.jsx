@@ -108,7 +108,7 @@ const Login = () => {
             {errors.password && <div className="error-message">{errors.password}</div>}
           </div>
           
-          <div className="form-options">
+          {/* <div className="form-options">
             <label className="checkbox-container">
               <input
                 type="checkbox"
@@ -122,14 +122,14 @@ const Login = () => {
             <Link to="/forgot-password" className="forgot-password">
               Quên mật khẩu?
             </Link>
-          </div>
+          </div> */}
           
           <button type="submit" className="login-button">
             Đăng nhập
           </button>
         </form>
         
-        <div className="login-divider">
+        {/* <div className="login-divider">
           <span>hoặc đăng nhập bằng</span>
         </div>
         
@@ -148,7 +148,7 @@ const Login = () => {
             <FiGithub />
             <span>Github</span>
           </button>
-        </div>
+        </div> */}
         
         <div className="register-link">
           Bạn chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link>

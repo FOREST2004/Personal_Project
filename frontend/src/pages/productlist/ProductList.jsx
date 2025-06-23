@@ -56,12 +56,27 @@ const ProductList = () => {
   // Handle category change
   const handleCategoryChange = (categorySlug) => {
     setFilters({ ...filters, category: categorySlug });
-    navigate(`/products?category=${categorySlug}&sort=${filters.sort}`);
+
+    if (filters.priceRange[0] > 0) {
+      navigate(`/products?category=${categorySlug}&priceRange=${filters.priceRange[0]}-${filters.priceRange[1]}&sort=${filters.sort}`);
+    } else {
+      navigate(`/products?category=${categorySlug}&sort=${filters.sort}`);
+    }
   };
+  
+  // Thêm state để track selected price range
+  const [selectedPriceRange, setSelectedPriceRange] = useState(null);
   
   // Handle price range change
   const handlePriceRangeChange = (min, max) => {
     setFilters({ ...filters, priceRange: [min, max] });
+    setSelectedPriceRange(`${min}-${max}`); // Track selected range
+  
+    if (filters.category) {
+      navigate(`/products?category=${filters.category}&priceRange=${min}-${max}&sort=${filters.sort}`);
+    } else {
+      navigate(`/products?priceRange=${min}-${max}&sort=${filters.sort}`);
+    }
   };
   
   // Handle sort change
@@ -71,12 +86,15 @@ const ProductList = () => {
     
     // Update URL params
     if (filters.category) {
-      navigate(`/products?category=${filters.category}&sort=${sort}`);
+      navigate(`/products?category=${filters.category}&priceRange=${filters.priceRange[0]}-${filters.priceRange[1]}&sort=${sort}`);
+    } else if (filters.priceRange[0] > 0) {
+      navigate(`/products?priceRange=${filters.priceRange[0]}-${filters.priceRange[1]}&sort=${sort}`);
     } else {
       navigate(`/products?sort=${sort}`);
     }
   };
   
+  // Reset all filters
   // Reset all filters
   const resetFilters = () => {
     setFilters({
@@ -85,6 +103,7 @@ const ProductList = () => {
       priceRange: [null, null],
       sort: 'popular'
     });
+    setSelectedPriceRange(null); // Reset selected price range
     
     navigate('/products');
   };
@@ -253,19 +272,34 @@ const ProductList = () => {
                     </div>
                     
                     <div className="price-ranges">
-                      <button onClick={() => handlePriceRangeChange(0, 2000000)}>
+                      <button 
+                        className={selectedPriceRange === '0-2000000' ? 'active' : ''}
+                        onClick={() => handlePriceRangeChange(0, 2000000)}
+                      >
                         Dưới 2 triệu
                       </button>
-                      <button onClick={() => handlePriceRangeChange(2000000, 5000000)}>
+                      <button 
+                        className={selectedPriceRange === '2000000-5000000' ? 'active' : ''}
+                        onClick={() => handlePriceRangeChange(2000000, 5000000)}
+                      >
                         2 - 5 triệu
                       </button>
-                      <button onClick={() => handlePriceRangeChange(5000000, 10000000)}>
+                      <button 
+                        className={selectedPriceRange === '5000000-10000000' ? 'active' : ''}
+                        onClick={() => handlePriceRangeChange(5000000, 10000000)}
+                      >
                         5 - 10 triệu
                       </button>
-                      <button onClick={() => handlePriceRangeChange(10000000, 20000000)}>
+                      <button 
+                        className={selectedPriceRange === '10000000-20000000' ? 'active' : ''}
+                        onClick={() => handlePriceRangeChange(10000000, 20000000)}
+                      >
                         10 - 20 triệu
                       </button>
-                      <button onClick={() => handlePriceRangeChange(20000000, 50000000)}>
+                      <button 
+                        className={selectedPriceRange === '20000000-50000000' ? 'active' : ''}
+                        onClick={() => handlePriceRangeChange(20000000, 50000000)}
+                      >
                         Trên 20 triệu
                       </button>
                     </div>

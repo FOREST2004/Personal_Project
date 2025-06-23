@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiPhone, FiMapPin } from 'react-icons/fi';
+import { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiPhone, FiMapPin, FiUsers } from 'react-icons/fi';
 import './Register.css';
 
 import {authService} from '../../services/authService'
@@ -16,7 +16,8 @@ const Register = () => {
     name_display: '',
     password: '',
     location: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    role: 'user' // Thêm role với giá trị mặc định
   });
   
   const [showPassword, setShowPassword] = useState(false);
@@ -88,6 +89,7 @@ const Register = () => {
     return Object.keys(newErrors).length === 0;
   };
   
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -103,6 +105,7 @@ const Register = () => {
           password: formData.password,
           location: formData.location,
           numberphone: formData.numberphone,
+          role: formData.role 
         };
 
         console.log('Sending registration data:', registerData);
@@ -231,6 +234,34 @@ const Register = () => {
               />
             </div>
             {errors.location && <div className="error-message">{errors.location}</div>}
+          </div>
+
+          <div className="form-group">
+            <label>Loại tài khoản</label>
+            <div className="role-selection">
+              <label className="checkbox-container">
+                <input
+                  type="radio"
+                  name="role"
+                  value="user"
+                  checked={formData.role === 'user'}
+                  onChange={handleChange}
+                />
+                <span className="checkmark"></span>
+                <span>Người dùng thông thường</span>
+              </label>
+              <label className="checkbox-container">
+                <input
+                  type="radio"
+                  name="role"
+                  value="commercial_user"
+                  checked={formData.role === 'commercial_user'}
+                  onChange={handleChange}
+                />
+                <span className="checkmark"></span>
+                <span>Người bán hàng</span>
+              </label>
+            </div>
           </div>
           
           <div className={`form-group ${errors.password ? 'error' : ''}`}>

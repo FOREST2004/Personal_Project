@@ -127,9 +127,15 @@
   }
   
   .category-item.active {
-    color: var(--primary-color);
+    background-color: var(--primary-color);
+    color: white;
     font-weight: 500;
-    background-color: rgba(0, 166, 153, 0.1);
+    border: 1px solid var(--primary-color);
+  }
+  
+  .category-item.active:hover {
+    background-color: var(--primary-color);
+    opacity: 0.9;
   }
   
   /* Price Range Filter */
@@ -434,4 +440,16 @@
       width: 100%;
       padding-top: 100%; /* 1:1 Aspect Ratio */
     }
+  }
+  
+  .price-ranges button.active {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    font-weight: 500;
+  }
+  
+  .price-ranges button.active:hover {
+    background-color: var(--primary-color);
+    opacity: 0.9;
   }

@@ -64,6 +64,8 @@ exports.login = async (req, res) => {
     const token = jwt.sign({ id: user.id_user }, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRES_IN
     });
+
+    console.log("Token of user logging:", token);
     
     // Loại bỏ password khỏi response
     delete user.password;
