@@ -43,7 +43,8 @@ CREATE TABLE users (
     -- Thêm các cột cho commercial users (sẽ là NULL với regular users)
     total_revenue DECIMAL(15, 2) DEFAULT NULL,
     total_products_sold INTEGER DEFAULT NULL,
-    total_active_products INTEGER DEFAULT NULL
+    total_active_products INTEGER DEFAULT NULL,
+    total_inactive_products INTEGER DEFAULT NULL
 );
 
 -- Bảng Category
@@ -173,6 +174,7 @@ BEGIN
             total_revenue = NULL,
             total_products_sold = NULL,
             total_active_products = NULL,
+            total_inactive_products = NULL,  -- Thêm dòng này
             updated_at = CURRENT_TIMESTAMP
         WHERE id_user = NEW.id_user;
     END IF;

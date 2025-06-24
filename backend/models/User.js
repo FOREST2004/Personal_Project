@@ -230,6 +230,7 @@ class User extends BaseModel {
           u.total_revenue,
           u.total_products_sold,
           u.total_active_products,
+          u.total_inactive_products,  -- Thêm dòng này
           COUNT(DISTINCT p.id_product) as current_products,
           COUNT(DISTINCT CASE WHEN p.status = 'active' THEN p.id_product END) as active_products,
           COUNT(DISTINCT o.id_order) as total_orders
@@ -237,7 +238,7 @@ class User extends BaseModel {
         LEFT JOIN products p ON u.id_user = p.id_user_sell
         LEFT JOIN orders o ON u.id_user = o.id_seller
         WHERE u.id_user = $1 AND u.role = 'commercial_user'
-        GROUP BY u.id_user, u.total_revenue, u.total_products_sold, u.total_active_products
+        GROUP BY u.id_user, u.total_revenue, u.total_products_sold, u.total_active_products, u.total_inactive_products  -- Thêm u.total_inactive_products vào GROUP BY
       `, [userId]);
       
       return result.rows[0] || null;

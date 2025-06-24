@@ -66,9 +66,7 @@ const Profile = () => {
           
           // Sửa cách truy cập dữ liệu
           if (user.role === 'commercial_user') {
-            console.log('Raw response.data:', response.data);
-            console.log('response.data type:', typeof response.data);
-            console.log('Array.isArray(response.data):', Array.isArray(response.data));
+       
             
             // Đối với getSellerProducts: response.data chứa products array trực tiếp
             const products = response.data || [];
@@ -466,17 +464,14 @@ const Profile = () => {
       case 'products':
         // Đảm bảo userProducts là array trước khi filter
         const safeUserProducts = Array.isArray(userProducts) ? userProducts : [];
-        console.log('userProducts in render:', userProducts);
-        console.log('safeUserProducts:', safeUserProducts);
-        console.log('safeUserProducts.length:', safeUserProducts.length);
-        console.log('productFilter:', productFilter);
+    
         
         // Lọc sản phẩm theo status
         const filteredProducts = productFilter === 'all' 
           ? safeUserProducts 
           : safeUserProducts.filter(product => product.status === productFilter);
           
-        console.log('filteredProducts:', filteredProducts);
+     
         return (
           <div className="content-body">
             <div className="user-products">

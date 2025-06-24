@@ -68,7 +68,7 @@ class Product extends BaseModel {
       const countQuery = `SELECT COUNT(*) FROM (${sqlQuery}) AS count_table`;
       const countResult = await query(countQuery, queryParams);
       const totalCount = parseInt(countResult.rows[0].count);
-      console.log('🔍 findAllWithDetails - Total count:', totalCount);
+      
   
       // Thêm ORDER BY
       switch(sort) {
