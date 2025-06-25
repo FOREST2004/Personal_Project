@@ -77,7 +77,7 @@ exports.getProductsByCategory = async (req, res) => {
 
 exports.createProduct = async (req, res) => {
   try {
-    const userId = req.user ? req.user.id_user : 1;
+    const sellerId = req.user ? req.user.id_user : 1;
     
     // Kiểm tra quyền tạo sản phẩm (chỉ commercial_user và admin)
     if (req.user && req.user.role === 'user') {
@@ -87,7 +87,7 @@ exports.createProduct = async (req, res) => {
       });
     }
     
-    const newProduct = await Product.createProduct(req.body, userId);
+    const newProduct = await Product.createProduct(req.body, sellerId);
     
     res.status(201).json({
       status: 'success',
@@ -136,13 +136,13 @@ exports.getSellerProducts = async (req, res) => {
 
 exports.updateProduct = async (req, res) => {
   try {
-    const userId = req.user ? req.user.id_user : null;
+    const sellerId = req.user ? req.user.id_user : null;
     const userRole = req.user ? req.user.role : null;
     
     const updatedProduct = await Product.updateProduct(
       req.params.id, 
       req.body, 
-      userId, 
+      sellerId, 
       userRole
     );
     
@@ -170,10 +170,10 @@ exports.updateProduct = async (req, res) => {
 
 exports.deleteProduct = async (req, res) => {
   try {
-    const userId = req.user ? req.user.id_user : null;
+    const sellerId = req.user ? req.user.id_user : null;
     const userRole = req.user ? req.user.role : null;
     
-    await Product.deleteProduct(req.params.id, userId, userRole);
+    await Product.deleteProduct(req.params.id, sellerId, userRole);
     
     res.status(204).json({
       status: 'success',
@@ -211,6 +211,29 @@ exports.getProductStats = async (req, res) => {
     res.status(500).json({
       status: 'error',
       message: 'Lỗi khi lấy thống kê sản phẩm',
+      error: error.message
+    });
+  }
+};
+
+// Thêm endpoint để lấy sản phẩm đã mua của user
+exports.getBuyerProducts = async (req, res) => {
+  try {
+    const buyerId = req.params.buyerId || (req.user ? req.user.id_user : null);
+    
+    const result = await Product.findByBuyer(buyerId, {
+      filters: req.query,
+      sort: req.query.sort
+    });
+    
+    res.status(200).json({
+      status: 'success',
+      data: result
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Lỗi khi lấy sản phẩm đã mua',
       error: error.message
     });
   }

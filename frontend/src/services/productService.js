@@ -129,6 +129,42 @@ export const productService = {
     }
   },
   
+  // Thêm function để lấy sản phẩm đã mua của user
+  getBuyerProducts: async (buyerId, params = {}) => {
+    try {
+      const queryParams = new URLSearchParams({
+        page: params.page || 1,
+        limit: params.limit || 10,
+        ...params
+      }).toString();
+      
+      const response = await api.get(`/products/buyer/${buyerId}?${queryParams}`);
+      
+      const responseData = response.data?.data || {};
+      
+      return {
+        data: responseData.products || [],
+        totalPages: responseData.pagination?.totalPages || 1,
+        currentPage: responseData.pagination?.currentPage || 1,
+        results: responseData.products?.length || 0
+      };
+    } catch (error) {
+      console.error('Error in getBuyerProducts:', error);
+      
+      if (error.response) {
+        throw {
+          message: error.response.data?.message || 'Lỗi khi lấy sản phẩm đã mua',
+          status: error.response.status
+        };
+      } else {
+        throw {
+          message: 'Không thể kết nối đến server',
+          status: 0
+        };
+      }
+    }
+  },
+  
   // Thêm function để cập nhật buyer cho sản phẩm
   updateProductBuyer: async (productId, buyerId) => {
     try {

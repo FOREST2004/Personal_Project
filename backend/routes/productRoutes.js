@@ -26,4 +26,7 @@ router.delete('/:id', protect, productController.deleteProduct);
 // Thêm route cho seller products
 router.get('/seller/:sellerId?', protect, restrictTo('commercial_user'), productController.getSellerProducts);
 
+// Thêm route cho buyer products
+router.get('/buyer/:buyerId?', productController.getBuyerProducts);
+
 module.exports = router;

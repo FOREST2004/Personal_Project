@@ -260,10 +260,10 @@ INSERT INTO products (name, price, description, image, status, id_user_sell, id_
 ('Chó Poodle Toy', 12000000, 'Chó Poodle Toy, 2 tháng tuổi, màu nâu đỏ, đã tiêm 2 mũi vaccine, rất xinh xắn và lanh lợi.', 'poodle_toy.jpg', 'active', 9, 4, 1),  -- seller1 -> user1
 ('Chó Corgi', 20000000, 'Chó Corgi đực, 4 tháng tuổi, màu vàng trắng, chân ngắn đáng yêu, rất vui vẻ và năng động.', 'corgi.jpg', 'active', 11, NULL, 1),  -- shop_cho
 ('Chó Husky Siberian', 18000000, 'Chó Husky Siberian cái, 5 tháng tuổi, lông dày, mắt xanh, đã huấn luyện cơ bản.', 'husky.jpg', 'active', 11, 5, 1),  -- shop_cho -> user2
-('Chó Golden Retriever', 16000000, 'Chó Golden Retriever, 3 tháng tuổi, màu vàng gold, tính cách hiền lành, thích hợp cho gia đình có trẻ em.', 'golden.jpg', 'active', 13, NULL, 1),  -- petcare
+('Chó Golden Retriever', 16000000, 'Chó Golden Retriever, 3 tháng tuổi, màu vàng gold, tính cách hiền lành, thích hợp cho gia đình có trẻ em.', 'golden.jpg', 'sold', 13, 5, 1),  -- petcare
 
 -- Sản phẩm thuộc danh mục Mèo
-('Mèo Anh lông ngắn', 8000000, 'Mèo Anh lông ngắn (British Shorthair), 4 tháng tuổi, màu xám xanh, béo tròn đáng yêu.', 'british_shorthair.jpg', 'active', 10, NULL, 2),  -- seller2
+('Mèo Anh lông ngắn', 8000000, 'Mèo Anh lông ngắn (British Shorthair), 4 tháng tuổi, màu xám xanh, béo tròn đáng yêu.', 'british_shorthair.jpg', 'sold', 10, 5, 2),  -- seller2
 ('Mèo Ba Tư', 10000000, 'Mèo Ba Tư lông dài, 3 tháng tuổi, màu trắng, mặt tịt đặc trưng, rất sang chảnh.', 'persian_cat.jpg', 'active', 10, 6, 2),  -- seller2 -> petlover
 ('Mèo Ragdoll', 15000000, 'Mèo Ragdoll thuần chủng, 6 tháng tuổi, màu point, mắt xanh, rất hiền và thân thiện.', 'ragdoll.jpg', 'active', 12, NULL, 2),  -- shop_meo
 ('Mèo Maine Coon', 20000000, 'Mèo Maine Coon, 5 tháng tuổi, màu tabby, kích thước lớn, đuôi dài đặc trưng.', 'maine_coon.jpg', 'active', 12, 7, 2),  -- shop_meo -> animalfriend

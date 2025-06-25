@@ -32,7 +32,8 @@ const Profile = () => {
     confirmPassword: ''
   });
   const [commercialStats, setCommercialStats] = useState(null);
-  const [productFilter, setProductFilter] = useState('all'); // Thêm state cho filter
+  const [productFilter, setProductFilter] = useState('all');
+  const [purchasedProducts, setPurchasedProducts] = useState([]);
   
   // Fetch commercial stats nếu user là commercial_user
   useEffect(() => {
@@ -166,6 +167,29 @@ const Profile = () => {
       setError(error.message || 'Có lỗi xảy ra khi đổi mật khẩu');
     }
   };
+    // Fetch purchased products for regular users
+  useEffect(() => {
+    const fetchPurchasedProducts = async () => {
+      if (user && user.role === 'user') {
+        try {
+          const response = await productService.getBuyerProducts(user.id_user);
+          const products = response.data || [];
+          setPurchasedProducts(products);
+        } catch (error) {
+          console.error('Error fetching purchased products:', error);
+          setPurchasedProducts([]);
+        }
+      }
+    };
+
+    fetchPurchasedProducts();
+  }, [user]);
+  
+  // Thêm useEffect để log state sau khi update
+  useEffect(() => {
+    console.log('State purchasedProducts updated:', purchasedProducts);
+    console.log('State purchasedProducts length:', purchasedProducts.length);
+  }, [purchasedProducts]);
 
   // Clear messages after 5 seconds
   useEffect(() => {
@@ -217,8 +241,8 @@ const Profile = () => {
                   {user.role !== 'commercial_user' && (
                     <>
                       <div className="stat-card">
-                        <div className="stat-value">{userProducts.length}</div>
-                        <div className="stat-label">Sản phẩm đã đăng</div>
+                        <div className="stat-value">{purchasedProducts.length || 0}</div> 
+                        <div className="stat-label">Số sản phẩm đã mua</div>
                       </div>
                       <div className="stat-card">
                         <div className="stat-value">{new Intl.NumberFormat('vi-VN').format(user.wallet || 0)}đ</div>

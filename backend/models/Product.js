@@ -11,7 +11,7 @@ class Product extends BaseModel {
   // Lấy tất cả sản phẩm với filter và join
   async findAllWithDetails(filters = {}, options = {}) {
     try {
-      const { page = 1, limit = 10, category, search, minPrice, maxPrice, status, userId, sellerId } = filters;
+      const { page = 1, limit = 10, category, search, minPrice, maxPrice, status, sellerId, buyerId } = filters;
       const { sort = 'newest' } = options;
       const offset = (page - 1) * limit;
 
@@ -56,11 +56,16 @@ class Product extends BaseModel {
         sqlQuery += ` AND p.price <= $${queryParams.length}`;
       }
   
-      // Tìm theo seller (thay thế userId cũ)
-      if (sellerId || userId) {
-        queryParams.push(sellerId || userId);
+      // Tìm theo seller - loại bỏ userId fallback
+      if (sellerId) {
+        queryParams.push(sellerId);
         sqlQuery += ` AND p.id_user_sell = $${queryParams.length}`;
-        console.log('🔍 findAllWithDetails - Added seller condition for:', sellerId || userId);
+      }
+      
+      // Tìm theo buyer
+      if (buyerId) {
+        queryParams.push(buyerId);
+        sqlQuery += ` AND p.id_user_buy = $${queryParams.length}`;
       }
       
   
@@ -206,7 +211,7 @@ class Product extends BaseModel {
   }
 
   // Tạo sản phẩm mới
-  async createProduct(productData, userId) {
+  async createProduct(productData, sellerId) {
     try {
       const { name, price, description, image, id_category } = productData;
   
@@ -216,8 +221,8 @@ class Product extends BaseModel {
         description,
         image,
         id_category: parseInt(id_category),
-        id_user_sell: userId, // Thay đổi từ id_user thành id_user_sell
-        id_user_buy: null,    // Khởi tạo null
+        id_user_sell: sellerId,
+        id_user_buy: null,
         status: 'active',
         date: new Date()
       });
@@ -229,19 +234,18 @@ class Product extends BaseModel {
   }
 
   // Cập nhật sản phẩm
-  async updateProduct(id, productData, userId = null, userRole = null) {
+  async updateProduct(id, productData, sellerId = null, userRole = null) {
     try {
-      // Kiểm tra sản phẩm tồn tại
       const existingProduct = await this.findById(id);
       if (!existingProduct) {
         throw new Error('Sản phẩm không tìm thấy');
       }
   
       // Kiểm tra quyền cập nhật (chỉ seller hoặc admin)
-      if (userId && userRole !== 'admin' && existingProduct.id_user_sell !== userId) {
+      if (sellerId && userRole !== 'admin' && existingProduct.id_user_sell !== sellerId) {
         throw new Error('Bạn không có quyền cập nhật sản phẩm này');
       }
-  
+    
       // Chuẩn bị dữ liệu cập nhật
       const updateData = {};
       if (productData.name !== undefined) updateData.name = productData.name;
@@ -260,19 +264,18 @@ class Product extends BaseModel {
   }
 
   // Xóa sản phẩm
-  async deleteProduct(id, userId = null, userRole = null) {
+  async deleteProduct(id, sellerId = null, userRole = null) {
     try {
-      // Kiểm tra sản phẩm tồn tại
       const existingProduct = await this.findById(id);
       if (!existingProduct) {
         throw new Error('Sản phẩm không tìm thấy');
       }
   
       // Kiểm tra quyền xóa (chỉ seller hoặc admin)
-      if (userId && userRole !== 'admin' && existingProduct.id_user_sell !== userId) {
+      if (sellerId && userRole !== 'admin' && existingProduct.id_user_sell !== sellerId) {
         throw new Error('Bạn không có quyền xóa sản phẩm này');
       }
-  
+    
       const deletedProduct = await this.delete(id);
       return deletedProduct;
     } catch (error) {
@@ -363,6 +366,19 @@ class Product extends BaseModel {
       }, { sort });
     } catch (error) {
       throw new Error(`Error in findByCategory: ${error.message}`);
+    }
+  }
+
+  // Thêm method mới để lấy sản phẩm đã mua của user
+  async findByBuyer(buyerId, options = {}) {
+    try {
+      return await this.findAllWithDetails({ 
+        buyerId, 
+        status: 'sold', // Chỉ lấy sản phẩm đã bán
+        ...options.filters 
+      }, options);
+    } catch (error) {
+      throw new Error(`Error in findByBuyer: ${error.message}`);
     }
   }
 }
