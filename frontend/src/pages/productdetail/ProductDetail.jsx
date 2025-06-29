@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FiMinus, FiPlus, FiShoppingCart, FiTruck, FiShield, FiCheck, FiArrowLeft, FiMapPin, FiUser, FiCalendar, FiPhone, FiMail, FiMessageCircle } from 'react-icons/fi';
 import './ProductDetail.css';
@@ -13,8 +13,20 @@ const ProductDetail = () => {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [isInCart, setIsInCart] = useState(false);
+
+  // Check if product is in cart
+  const checkProductInCart = () => {
+    try {
+      const existingCart = JSON.parse(localStorage.getItem('cart') || '[]');
+      const isProductInCart = existingCart.some(item => item.id === parseInt(id));
+      setIsInCart(isProductInCart);
+    } catch (error) {
+      console.error('Error checking cart:', error);
+      setIsInCart(false);
+    }
+  };
 
   // Fetch product data
   useEffect(() => {
@@ -43,7 +55,20 @@ const ProductDetail = () => {
 
     if (id) {
       fetchProduct();
+      checkProductInCart();
     }
+  }, [id]);
+
+  // Listen for cart updates
+  useEffect(() => {
+    const handleCartUpdate = () => {
+      checkProductInCart();
+    };
+
+    window.addEventListener('cartUpdated', handleCartUpdate);
+    return () => {
+      window.removeEventListener('cartUpdated', handleCartUpdate);
+    };
   }, [id]);
 
   // Format price to VND
@@ -96,23 +121,10 @@ const ProductDetail = () => {
     return colors[categoryName] || '#9e9e9e';
   };
 
-  // Increase quantity
-  const increaseQuantity = () => {
-    setQuantity(prev => prev + 1);
-  };
-
-  // Decrease quantity
-  const decreaseQuantity = () => {
-    if (quantity > 1) {
-      setQuantity(prev => prev - 1);
-    }
-  };
-
-  // Handle quantity input change
-  const handleQuantityChange = (e) => {
-    const value = parseInt(e.target.value) || 1;
-    setQuantity(Math.max(1, value));
-  };
+  // Remove these functions:
+  // - increaseQuantity
+  // - decreaseQuantity  
+  // - handleQuantityChange
 
   // Add to cart handler
   const handleAddToCart = () => {
@@ -121,26 +133,40 @@ const ProductDetail = () => {
       return;
     }
 
+    if (isInCart) {
+      alert('Sản phẩm đã có trong giỏ hàng!');
+      return;
+    }
+  
     const cartItem = {
       id: product.id_product,
       name: product.name,
       price: product.price,
       image: product.image,
-      quantity: quantity,
-      seller: product.user?.name_display || 'Không rõ'
+      quantity: 1, // Fixed quantity
+      seller: product.user?.name_display || product.seller?.name_display || 'Không rõ'
     };
-
-    const existingCart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const existingItemIndex = existingCart.findIndex(item => item.id === product.id_product);
-    
-    if (existingItemIndex >= 0) {
-      existingCart[existingItemIndex].quantity += quantity;
-    } else {
+  
+    try {
+      const existingCart = JSON.parse(localStorage.getItem('cart') || '[]');
       existingCart.push(cartItem);
+      
+      localStorage.setItem('cart', JSON.stringify(existingCart));
+      
+      // Trigger custom event to update cart count
+      window.dispatchEvent(new Event('cartUpdated'));
+      
+      setIsInCart(true);
+      alert('Đã thêm sản phẩm vào giỏ hàng!');
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      alert('Có lỗi xảy ra khi thêm sản phẩm vào giỏ hàng');
     }
-    
-    localStorage.setItem('cart', JSON.stringify(existingCart));
-    alert(`Đã thêm ${quantity} sản phẩm vào giỏ hàng!`);
+  };
+
+  // Go to cart handler
+  const handleGoToCart = () => {
+    navigate('/cart');
   };
 
   // Buy now handler
@@ -293,12 +319,25 @@ const ProductDetail = () => {
             <div className="detail-product-actions">
               {product.status === 'active' ? (
                 <>
-                  <button className="detail-add-to-cart-btn" onClick={handleAddToCart}>
-                    <FiShoppingCart /> Thêm vào giỏ
-                  </button>
-                  <button className="detail-buy-now-btn" onClick={handleBuyNow}>
-                    Mua ngay
-                  </button>
+                  {isInCart ? (
+                    <>
+                      <button className="detail-in-cart-btn" disabled>
+                        <FiCheck /> Đã có trong giỏ
+                      </button>
+                      <button className="detail-go-to-cart-btn" onClick={handleGoToCart}>
+                        <FiShoppingCart /> Xem giỏ hàng
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button className="detail-add-to-cart-btn" onClick={handleAddToCart}>
+                        <FiShoppingCart /> Thêm vào giỏ
+                      </button>
+                      <button className="detail-buy-now-btn" onClick={handleBuyNow}>
+                        Mua ngay
+                      </button>
+                    </>
+                  )}
                 </>
               ) : (
                 <button className="detail-contact-seller-btn" onClick={handleContactSeller}>

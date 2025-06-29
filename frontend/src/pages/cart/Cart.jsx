@@ -12,58 +12,38 @@ const Cart = () => {
   const [selectedItems, setSelectedItems] = useState({});
   const [selectAll, setSelectAll] = useState(false);
   
-  // Mock data for cart items
+  // Load cart from localStorage
   useEffect(() => {
     setLoading(true);
     
-    // Mock cart data
-    setTimeout(() => {
-      const mockCartItems = [
-        {
-          id: 1,
-          name: 'iPhone 15 Pro Max 256GB',
-          price: 28990000,
-          originalPrice: 32990000,
-          discount: 12,
-          quantity: 1,
-          stock: 50,
-          image: 'https://via.placeholder.com/150?text=iPhone+15',
-        },
-        {
-          id: 2,
-          name: 'Cáp sạc USB-C to Lightning 1m',
-          price: 390000,
-          originalPrice: 590000,
-          discount: 33,
-          quantity: 2,
-          stock: 100,
-          image: 'https://via.placeholder.com/150?text=Cáp+sạc',
-        },
-        {
-          id: 3,
-          name: 'Ốp lưng iPhone 15 Pro Max Silicon',
-          price: 590000,
-          originalPrice: 790000,
-          discount: 25,
-          quantity: 1,
-          stock: 30,
-          image: 'https://via.placeholder.com/150?text=Ốp+lưng',
-        },
-      ];
+    try {
+      const savedCart = localStorage.getItem('cart');
+      const cartData = savedCart ? JSON.parse(savedCart) : [];
       
-      setCartItems(mockCartItems);
+      setCartItems(cartData);
       
       // Initialize selected items (all selected by default)
       const initialSelected = {};
-      mockCartItems.forEach(item => {
+      cartData.forEach(item => {
         initialSelected[item.id] = true;
       });
       
       setSelectedItems(initialSelected);
-      setSelectAll(true);
+      setSelectAll(cartData.length > 0);
+    } catch (error) {
+      console.error('Error loading cart:', error);
+      setCartItems([]);
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   }, []);
+  
+  // Save cart to localStorage whenever cartItems changes
+  useEffect(() => {
+    if (!loading) {
+      localStorage.setItem('cart', JSON.stringify(cartItems));
+    }
+  }, [cartItems, loading]);
   
   // Format price to VND
   const formatPrice = (price) => {
@@ -72,6 +52,8 @@ const Cart = () => {
   
   // Handle quantity change
   const handleQuantityChange = (id, newQuantity) => {
+    if (newQuantity < 1) return;
+    
     setCartItems(cartItems.map(item => 
       item.id === id ? { ...item, quantity: newQuantity } : item
     ));
@@ -119,35 +101,30 @@ const Cart = () => {
   const calculateTotals = () => {
     let totalItems = 0;
     let subtotal = 0;
-    let discount = 0;
     
     cartItems.forEach(item => {
       if (selectedItems[item.id]) {
         totalItems += item.quantity;
-        subtotal += item.originalPrice * item.quantity;
-        discount += (item.originalPrice - item.price) * item.quantity;
+        subtotal += item.price * item.quantity;
       }
     });
-    
-    const total = subtotal - discount;
     
     return {
       totalItems,
       subtotal,
-      discount,
-      total
+      total: subtotal
     };
   };
   
-  const { totalItems, subtotal, discount, total } = calculateTotals();
+  const { totalItems, subtotal, total } = calculateTotals();
   
   // Check if any items are selected
   const hasSelectedItems = Object.values(selectedItems).some(selected => selected);
   
   // Increment quantity
-  const incrementQuantity = (id, stock) => {
+  const incrementQuantity = (id) => {
     const item = cartItems.find(item => item.id === id);
-    if (item && item.quantity < stock) {
+    if (item) {
       handleQuantityChange(id, item.quantity + 1);
     }
   };
@@ -199,71 +176,64 @@ const Cart = () => {
                       onChange={handleSelectAll}
                     />
                     <span className="checkmark"></span>
-                    <span>Chọn tất cả ({cartItems.length})</span>
+                    Chọn tất cả ({cartItems.length} sản phẩm)
                   </label>
                 </div>
                 
                 <div className="cart-column-headers">
-                  <div className="product-column">Sản phẩm</div>
-                  <div className="price-column">Đơn giá</div>
-                  <div className="quantity-column">Số lượng</div>
-                  <div className="total-column">Thành tiền</div>
-                  <div className="action-column"></div>
+                  <span>Sản phẩm</span>
+                  <span>Thành tiền</span>
+                  <span></span>
                 </div>
               </div>
               
               <div className="cart-items-list">
                 {cartItems.map(item => (
                   <div key={item.id} className="cart-item">
-                    <div className="item-select">
-                      <label className="checkbox-container">
-                        <input
-                          type="checkbox"
-                          checked={!!selectedItems[item.id]}
-                          onChange={() => handleSelectItem(item.id)}
-                        />
-                        <span className="checkmark"></span>
-                      </label>
-                    </div>
+                    <label className="checkbox-container">
+                      <input
+                        type="checkbox"
+                        checked={!!selectedItems[item.id]}
+                        onChange={() => handleSelectItem(item.id)}
+                      />
+                      <span className="checkmark"></span>
+                    </label>
                     
                     <div className="item-info">
                       <div className="item-image">
-                        <img src={item.image} alt={item.name} />
+                        <img src={item.image || '/src/assets/meo.jpg'} alt={item.name} />
                       </div>
-                      
-                      <div className="item-name">
-                        <Link to={`/products/${item.id}`}>{item.name}</Link>
+                      <div className="item-details">
+                        <div className="item-name">
+                          <Link to={`/products/${item.id}`}>{item.name}</Link>
+                        </div>
+                        {item.seller && (
+                          <div className="item-seller">
+                            Người bán: {item.seller}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                    
-                    <div className="item-price">
-                      <div className="current-price">{formatPrice(item.price)}</div>
-                      {item.discount > 0 && (
-                        <div className="original-price">{formatPrice(item.originalPrice)}</div>
-                      )}
                     </div>
                     
                     <div className="item-quantity">
                       <div className="quantity-control">
-                        <button
+                        <button 
                           className="quantity-btn"
                           onClick={() => decrementQuantity(item.id)}
                           disabled={item.quantity <= 1}
                         >
                           -
                         </button>
-                        <input
-                          type="number"
-                          min="1"
-                          max={item.stock}
+                        <input 
+                          type="number" 
+                          className="quantity-input"
                           value={item.quantity}
                           onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value) || 1)}
-                          className="quantity-input"
+                          min="1"
                         />
-                        <button
+                        <button 
                           className="quantity-btn"
-                          onClick={() => incrementQuantity(item.id, item.stock)}
-                          disabled={item.quantity >= item.stock}
+                          onClick={() => incrementQuantity(item.id)}
                         >
                           +
                         </button>
@@ -275,9 +245,10 @@ const Cart = () => {
                     </div>
                     
                     <div className="item-action">
-                      <button
+                      <button 
                         className="remove-btn"
                         onClick={() => handleRemoveItem(item.id)}
+                        title="Xóa sản phẩm"
                       >
                         <FiTrash2 />
                       </button>
@@ -295,17 +266,18 @@ const Cart = () => {
                       onChange={handleSelectAll}
                     />
                     <span className="checkmark"></span>
-                    <span>Chọn tất cả ({cartItems.length})</span>
+                    Chọn tất cả
                   </label>
                 </div>
                 
-                <button
+                <button 
                   className="delete-selected-btn"
                   disabled={!hasSelectedItems}
                   onClick={() => {
-                    const itemsToRemove = cartItems.filter(item => selectedItems[item.id]);
-                    setCartItems(cartItems.filter(item => !selectedItems[item.id]));
+                    const remainingItems = cartItems.filter(item => !selectedItems[item.id]);
+                    setCartItems(remainingItems);
                     setSelectedItems({});
+                    setSelectAll(false);
                   }}
                 >
                   Xóa đã chọn
@@ -316,16 +288,11 @@ const Cart = () => {
             {/* Checkout summary */}
             <div className="checkout-summary">
               <div className="summary-card">
-                <h2 className="summary-title">Tóm tắt đơn hàng</h2>
+                <h3 className="summary-title">Tóm tắt đơn hàng</h3>
                 
                 <div className="summary-item">
                   <span>Tạm tính ({totalItems} sản phẩm):</span>
                   <span>{formatPrice(subtotal)}</span>
-                </div>
-                
-                <div className="summary-item discount-item">
-                  <span>Giảm giá:</span>
-                  <span>- {formatPrice(discount)}</span>
                 </div>
                 
                 <div className="summary-divider"></div>
@@ -335,32 +302,17 @@ const Cart = () => {
                   <span>{formatPrice(total)}</span>
                 </div>
                 
-                <Link 
-                  to="/checkout" 
+                <button 
                   className={`btn-checkout ${!hasSelectedItems ? 'disabled' : ''}`}
-                  onClick={(e) => !hasSelectedItems && e.preventDefault()}
+                  disabled={!hasSelectedItems}
                 >
-                  Thanh toán
-                  <FiChevronRight />
-                </Link>
+                  <FiShoppingCart />
+                  Mua hàng ({totalItems})
+                </button>
                 
                 <Link to="/products" className="btn-continue-shopping-alt">
                   Tiếp tục mua sắm
                 </Link>
-              </div>
-              
-              <div className="promo-card">
-                <h3 className="promo-title">Mã giảm giá</h3>
-                
-                <div className="promo-item">
-                  <div className="promo-badge">WELCOME</div>
-                  <p>Giảm 10% cho đơn hàng đầu tiên</p>
-                </div>
-                
-                <div className="promo-item">
-                  <div className="promo-badge">FREESHIP</div>
-                  <p>Miễn phí vận chuyển cho đơn hàng từ 500.000đ</p>
-                </div>
               </div>
             </div>
           </div>
