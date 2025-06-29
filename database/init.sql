@@ -258,7 +258,7 @@ INSERT INTO products (name, price, description, image, status, id_user_sell, id_
 -- Sản phẩm thuộc danh mục Chó
 ('Chó Labrador Retriever', 15000000, 'Chó Labrador Retriever thuần chủng, 3 tháng tuổi, đã tiêm phòng đầy đủ, rất thân thiện và thông minh.', 'labrador.jpg', 'active', 9, NULL, 1),  -- seller1
 ('Chó Poodle Toy', 12000000, 'Chó Poodle Toy, 2 tháng tuổi, màu nâu đỏ, đã tiêm 2 mũi vaccine, rất xinh xắn và lanh lợi.', 'poodle_toy.jpg', 'active', 9, 4, 1),  -- seller1 -> user1
-('Chó Corgi', 20000000, 'Chó Corgi đực, 4 tháng tuổi, màu vàng trắng, chân ngắn đáng yêu, rất vui vẻ và năng động.', 'corgi.jpg', 'active', 11, NULL, 1),  -- shop_cho
+('Chó Corgi', 20000000, 'Chó Corgi đực, 4 tháng tuổi, màu vàng trắng, chân ngắn đáng yêu, rất vui vẻ và năng động.', 'corgi.jpg', 'sold', 11, 10, 1),  -- shop_cho
 ('Chó Husky Siberian', 18000000, 'Chó Husky Siberian cái, 5 tháng tuổi, lông dày, mắt xanh, đã huấn luyện cơ bản.', 'husky.jpg', 'active', 11, 5, 1),  -- shop_cho -> user2
 ('Chó Golden Retriever', 16000000, 'Chó Golden Retriever, 3 tháng tuổi, màu vàng gold, tính cách hiền lành, thích hợp cho gia đình có trẻ em.', 'golden.jpg', 'sold', 13, 5, 1),  -- petcare
 
@@ -280,11 +280,11 @@ INSERT INTO products (name, price, description, image, status, id_user_sell, id_
 ('Chim Vẹt Sun Conure', 15000000, 'Chim Vẹt Sun Conure 1 tuổi, màu sắc rực rỡ, đã thuần, biết nói vài từ đơn giản.', 'sun_conure.jpg', 'active', 10, NULL, 4),  -- seller2
 ('Chim Sáo Đen', 2000000, 'Chim Sáo Đen 8 tháng tuổi, đã biết hót và nói chuyện, rất thông minh.', 'mynah_bird.jpg', 'sold', 9, 4, 4),  -- seller1 -> user1
 ('Chim Yến Phụng', 1000000, 'Chim Yến Phụng, màu vàng đỏ, hót hay, khoảng 6 tháng tuổi.', 'canary.jpg', 'active', 12, NULL, 4),  -- shop_meo
-('Chim Họa Mi', 1500000, 'Chim Họa Mi trống, hót cực hay, đã được huấn luyện kỹ, khoảng 1 năm tuổi.', 'nightingale.jpg', 'active', 13, NULL, 4),  -- petcare
+('Chim Họa Mi', 1500000, 'Chim Họa Mi trống, hót cực hay, đã được huấn luyện kỹ, khoảng 1 năm tuổi.', 'nightingale.jpg', 'sold', 13, 10, 4),  -- petcare
 ('Chim Vành Khuyên', 800000, 'Chim Vành Khuyên mái, giọng hót trong trẻo, khoảng 9 tháng tuổi.', 'finch_bird.jpg', 'active', 13, 5, 4),  -- petcare -> user2
 
 -- Sản phẩm thuộc danh mục Sóc
-('Sóc Bay Úc', 2500000, 'Sóc Bay Úc (Sugar Glider), 6 tháng tuổi, rất dễ thương và đã thuần hóa.', 'sugar_glider.jpg', 'active', 9, NULL, 5),  -- seller1
+('Sóc Bay Úc', 2500000, 'Sóc Bay Úc (Sugar Glider), 6 tháng tuổi, rất dễ thương và đã thuần hóa.', 'sugar_glider.jpg', 'sold', 9, 10, 5),  -- seller1
 ('Sóc Nhật', 1200000, 'Sóc Nhật Bản, màu xám trắng, rất tăng động và dễ nuôi.', 'japanese_squirrel.jpg', 'active', 9, 6, 5),  -- seller1 -> petlover
 ('Sóc Đất', 900000, 'Sóc Đất, màu nâu vàng, hiền lành, đã được huấn luyện cơ bản.', 'ground_squirrel.jpg', 'active', 10, NULL, 5),  -- seller2
 ('Sóc Siberia', 1800000, 'Sóc Siberia lông dày, màu xám bạc, rất quý hiếm, khoảng 8 tháng tuổi.', 'siberian_squirrel.jpg', 'inactive', 10, NULL, 5),  -- seller2

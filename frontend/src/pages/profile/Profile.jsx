@@ -10,11 +10,14 @@ import {
   FiMail,
   FiPhone,
   FiMapPin,
-  FiDollarSign
+  FiDollarSign,
+  FiShoppingBag,
+  FiPlus // Thêm icon cho tạo sản phẩm
 } from 'react-icons/fi';
 import ProductCard from '../../components/productCard/ProductCard';
 import { authService } from '../../services/authService';
 import { productService } from '../../services/productService';
+import { categoryService } from '../../services/categoryService'; // Thêm import
 import './Profile.css';
 
 const Profile = () => {
@@ -35,6 +38,33 @@ const Profile = () => {
   const [productFilter, setProductFilter] = useState('all');
   const [purchasedProducts, setPurchasedProducts] = useState([]);
   
+  // Thêm state cho tạo sản phẩm
+  const [categories, setCategories] = useState([]);
+  const [productFormData, setProductFormData] = useState({
+    name: '',
+    price: '',
+    description: '',
+    image: '',
+    id_category: ''
+  });
+  const [productFormErrors, setProductFormErrors] = useState({});
+  const [isCreatingProduct, setIsCreatingProduct] = useState(false);
+
+  // Fetch categories khi component mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await categoryService.getAllCategories();
+        setCategories(response.data || []);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+        setCategories([]);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
   // Fetch commercial stats nếu user là commercial_user
   useEffect(() => {
     const fetchCommercialStats = async () => {
@@ -51,32 +81,14 @@ const Profile = () => {
     fetchCommercialStats();
   }, [user]);
 
-  // Fetch user products when products tab is active
+  // Fetch user products when my-products tab is active
   useEffect(() => {
     const fetchProducts = async () => {
-      if (activeTab === 'products' && user) {
+      if (activeTab === 'my-products' && user && user.role === 'commercial_user') {
         try {
-          let response;
-          if (user.role === 'commercial_user') {
-            response = await productService.getSellerProducts(user.id_user);
-          } else {
-            response = await productService.getAllProducts();
-          }
-          
-          console.log('API Response:', response);
-          
-          // Sửa cách truy cập dữ liệu
-          if (user.role === 'commercial_user') {
-       
-            
-            // Đối với getSellerProducts: response.data chứa products array trực tiếp
-            const products = response.data || [];
-            console.log('Final products:', products);
-            setUserProducts(Array.isArray(products) ? products : []);
-          } else {
-            // Đối với getAllProducts: response.data là array trực tiếp
-            setUserProducts(Array.isArray(response.data) ? response.data : []);
-          }
+          const response = await productService.getSellerProducts(user.id_user);
+          const products = response.data || [];
+          setUserProducts(Array.isArray(products) ? products : []);
         } catch (error) {
           console.error('Error fetching products:', error);
           setUserProducts([]);
@@ -167,10 +179,10 @@ const Profile = () => {
       setError(error.message || 'Có lỗi xảy ra khi đổi mật khẩu');
     }
   };
-    // Fetch purchased products for regular users
+  // Fetch purchased products for both user and commercial_user
   useEffect(() => {
     const fetchPurchasedProducts = async () => {
-      if (user && user.role === 'user') {
+      if (user && (user.role === 'user' || user.role === 'commercial_user')) {
         try {
           const response = await productService.getBuyerProducts(user.id_user);
           const products = response.data || [];
@@ -259,8 +271,8 @@ const Profile = () => {
                         <div className="stat-label">Tổng doanh thu</div>
                       </div>
                       <div className="stat-card">
-                        <div className="stat-value"></div>
-                        <div className="stat-label"></div>
+                        <div className="stat-value">{purchasedProducts.length || 0}</div>
+                        <div className="stat-label">Số sản phẩm đã mua</div>
                       </div>
                       <div className="stat-card">
                         <div className="stat-value">{new Intl.NumberFormat('vi-VN').format(user.wallet || 0)}đ</div>
@@ -485,17 +497,144 @@ const Profile = () => {
           </div>
         );
 
-      case 'products':
-        // Đảm bảo userProducts là array trước khi filter
+      case 'create-product':
+        return (
+          <div className="content-body">
+            {error && <div className="error-message">{error}</div>}
+            {success && <div className="success-message">{success}</div>}
+            
+            <form onSubmit={handleCreateProduct} className="profile-form">
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="productName">Tên sản phẩm *</label>
+                  <input
+                    type="text"
+                    id="productName"
+                    name="name"
+                    value={productFormData.name}
+                    onChange={handleProductFormChange}
+                    placeholder="Nhập tên sản phẩm"
+                    className={productFormErrors.name ? 'error' : ''}
+                  />
+                  {productFormErrors.name && <div className="error-message">{productFormErrors.name}</div>}
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="productPrice">Giá (VNĐ) *</label>
+                  <input
+                    type="number"
+                    id="productPrice"
+                    name="price"
+                    value={productFormData.price}
+                    onChange={handleProductFormChange}
+                    placeholder="Nhập giá sản phẩm"
+                    min="0"
+                    // step="1000"
+                    className={productFormErrors.price ? 'error' : ''}
+                  />
+                  {productFormErrors.price && <div className="error-message">{productFormErrors.price}</div>}
+                </div>
+              </div>
+              
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="productCategory">Danh mục *</label>
+                  <select
+                    id="productCategory"
+                    name="id_category"
+                    value={productFormData.id_category}
+                    onChange={handleProductFormChange}
+                    className={productFormErrors.id_category ? 'error' : ''}
+                  >
+                    <option value="">Chọn danh mục</option>
+                    {categories.map(category => (
+                      <option key={category.id_category} value={category.id_category}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                  {productFormErrors.id_category && <div className="error-message">{productFormErrors.id_category}</div>}
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="productImage">URL Hình ảnh *</label>
+                  <input
+                    type="url"
+                    id="productImage"
+                    name="image"
+                    value={productFormData.image}
+                    onChange={handleProductFormChange}
+                    placeholder="https://example.com/image.jpg"
+                    className={productFormErrors.image ? 'error' : ''}
+                  />
+                  {productFormErrors.image && <div className="error-message">{productFormErrors.image}</div>}
+                </div>
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="productDescription">Mô tả sản phẩm *</label>
+                <textarea
+                  id="productDescription"
+                  name="description"
+                  value={productFormData.description}
+                  onChange={handleProductFormChange}
+                  placeholder="Nhập mô tả chi tiết về sản phẩm"
+                  rows="4"
+                  className={productFormErrors.description ? 'error' : ''}
+                />
+                {productFormErrors.description && <div className="error-message">{productFormErrors.description}</div>}
+              </div>
+              
+              <div className="form-actions">
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  disabled={isCreatingProduct}
+                >
+                  <FiPlus />
+                  {isCreatingProduct ? 'Đang tạo...' : 'Tạo sản phẩm'}
+                </button>
+              </div>
+            </form>
+          </div>
+        );
+
+      /////////////////////
+      case 'purchased-products':
+        // Logic cho sản phẩm đã mua (purchasedProducts) - cho cả user và commercial_user
+        const safePurchasedProducts = Array.isArray(purchasedProducts) ? purchasedProducts : [];
+        
+        return (
+          <div className="content-body">
+            <div className="user-products">
+              <div className="products-header">
+                <h3>Sản phẩm đã mua ({safePurchasedProducts.length})</h3>
+              </div>
+              
+              {safePurchasedProducts.length > 0 ? (
+                <div className="products-grid">
+                  {safePurchasedProducts.map(product => (
+                    <ProductCard key={product.id_product} product={product} />
+                  ))}
+                </div>
+              ) : (
+                <div className="no-products">
+                  <p>Bạn chưa mua sản phẩm nào</p>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'my-products':
+        // Logic cho sản phẩm của commercial_user
         const safeUserProducts = Array.isArray(userProducts) ? userProducts : [];
-    
         
         // Lọc sản phẩm theo status
-        const filteredProducts = productFilter === 'all' 
-          ? safeUserProducts 
-          : safeUserProducts.filter(product => product.status === productFilter);
-          
-     
+        const filteredUserProducts = productFilter !== 'all' 
+          ? safeUserProducts.filter(product => product.status === productFilter)
+          : safeUserProducts;
+    
         return (
           <div className="content-body">
             <div className="user-products">
@@ -508,32 +647,32 @@ const Profile = () => {
                     className={`filter-btn ${productFilter === 'all' ? 'active' : ''}`}
                     onClick={() => setProductFilter('all')}
                   >
-                    Tất cả ({userProducts.length})
+                    Tất cả ({safeUserProducts.length})
                   </button>
                   <button 
                     className={`filter-btn ${productFilter === 'active' ? 'active' : ''}`}
                     onClick={() => setProductFilter('active')}
                   >
-                    Đang bán ({userProducts.filter(p => p.status === 'active').length})
+                    Đang bán ({safeUserProducts.filter(p => p.status === 'active').length})
                   </button>
                   <button 
                     className={`filter-btn ${productFilter === 'sold' ? 'active' : ''}`}
                     onClick={() => setProductFilter('sold')}
                   >
-                    Đã bán ({userProducts.filter(p => p.status === 'sold').length})
+                    Đã bán ({safeUserProducts.filter(p => p.status === 'sold').length})
                   </button>
                   <button 
                     className={`filter-btn ${productFilter === 'inactive' ? 'active' : ''}`}
                     onClick={() => setProductFilter('inactive')}
                   >
-                    Tạm dừng ({userProducts.filter(p => p.status === 'inactive').length})
+                    Tạm dừng ({safeUserProducts.filter(p => p.status === 'inactive').length})
                   </button>
                 </div>
               </div>
               
-              {filteredProducts.length > 0 ? (
+              {filteredUserProducts.length > 0 ? (
                 <div className="products-grid">
-                  {filteredProducts.map(product => (
+                  {filteredUserProducts.map(product => (
                     <ProductCard key={product.id_product} product={product} />
                   ))}
                 </div>
@@ -555,65 +694,296 @@ const Profile = () => {
     }
   };
 
+  // Thêm function xử lý tạo sản phẩm
+  const handleProductFormChange = (e) => {
+    const { name, value } = e.target;
+    setProductFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Clear error khi user nhập
+    if (productFormErrors[name]) {
+      setProductFormErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+
+  const validateProductForm = () => {
+    const errors = {};
+    
+    if (!productFormData.name.trim()) {
+      errors.name = 'Vui lòng nhập tên sản phẩm';
+    }
+    
+    if (!productFormData.price || parseFloat(productFormData.price) < 1000) {
+      errors.price = 'Vui lòng nhập giá lớn hơn hoặc bằng 1000 VNĐ';
+    }
+    
+    if (!productFormData.description.trim()) {
+      errors.description = 'Vui lòng nhập mô tả sản phẩm';
+    }
+    
+    if (!productFormData.id_category) {
+      errors.id_category = 'Vui lòng chọn danh mục';
+    }
+    
+    if (!productFormData.image.trim()) {
+      errors.image = 'Vui lòng nhập URL hình ảnh';
+    }
+    
+    return errors;
+  };
+
+  const handleCreateProduct = async (e) => {
+    e.preventDefault();
+    
+    const errors = validateProductForm();
+    if (Object.keys(errors).length > 0) {
+      setProductFormErrors(errors);
+      return;
+    }
+    
+    try {
+      setIsCreatingProduct(true);
+      setError(null);
+      setSuccess(null);
+      
+      await productService.createProduct(productFormData);
+      
+      // Reset form
+      setProductFormData({
+        name: '',
+        price: '',
+        description: '',
+        image: '',
+        id_category: ''
+      });
+      
+      setSuccess('Tạo sản phẩm thành công!');
+      
+      // Refresh products list nếu đang ở tab my-products
+      if (activeTab === 'my-products') {
+        // Trigger refresh products
+        const response = await productService.getSellerProducts(user.id_user);
+        const products = response.data || [];
+        setUserProducts(Array.isArray(products) ? products : []);
+      }
+      
+    } catch (error) {
+      console.error('Error creating product:', error);
+      setError(error.message || 'Có lỗi xảy ra khi tạo sản phẩm');
+    } finally {
+      setIsCreatingProduct(false);
+    }
+  };
+
+  // Render create product form
+  // const renderCreateProductForm = () => {
+  //   return (
+  //     <div className="content-body">
+  //       {error && <div className="error-message">{error}</div>}
+  //       {success && <div className="success-message">{success}</div>}
+        
+  //       <form onSubmit={handleCreateProduct} className="profile-form">
+  //         <div className="form-row">
+  //           <div className="form-group">
+  //             <label htmlFor="productName">Tên sản phẩm *</label>
+  //             <input
+  //               type="text"
+  //               id="productName"
+  //               name="name"
+  //               value={productFormData.name}
+  //               onChange={handleProductFormChange}
+  //               placeholder="Nhập tên sản phẩm"
+  //               className={productFormErrors.name ? 'error' : ''}
+  //             />
+  //             {productFormErrors.name && <div className="error-message">{productFormErrors.name}</div>}
+  //           </div>
+            
+  //           <div className="form-group">
+  //             <label htmlFor="productPrice">Giá (VNĐ) *</label>
+  //             <input
+  //               type="number"
+  //               id="productPrice"
+  //               name="price"
+  //               value={productFormData.price}
+  //               onChange={handleProductFormChange}
+  //               placeholder="Nhập giá sản phẩm"
+  //               min="0"
+  //               step="1000"
+  //               className={productFormErrors.price ? 'error' : ''}
+  //             />
+  //             {productFormErrors.price && <div className="error-message">{productFormErrors.price}</div>}
+  //           </div>
+  //         </div>
+          
+  //         <div className="form-row">
+  //           <div className="form-group">
+  //             <label htmlFor="productCategory">Danh mục *</label>
+  //             <select
+  //               id="productCategory"
+  //               name="id_category"
+  //               value={productFormData.id_category}
+  //               onChange={handleProductFormChange}
+  //               className={productFormErrors.id_category ? 'error' : ''}
+  //             >
+  //               <option value="">Chọn danh mục</option>
+  //               {categories.map(category => (
+  //                 <option key={category.id_category} value={category.id_category}>
+  //                   {category.name}
+  //                 </option>
+  //               ))}
+  //             </select>
+  //             {productFormErrors.id_category && <div className="error-message">{productFormErrors.id_category}</div>}
+  //           </div>
+            
+  //           <div className="form-group">
+  //             <label htmlFor="productImage">URL Hình ảnh *</label>
+  //             <input
+  //               type="url"
+  //               id="productImage"
+  //               name="image"
+  //               value={productFormData.image}
+  //               onChange={handleProductFormChange}
+  //               placeholder="https://example.com/image.jpg"
+  //               className={productFormErrors.image ? 'error' : ''}
+  //             />
+  //             {productFormErrors.image && <div className="error-message">{productFormErrors.image}</div>}
+  //           </div>
+  //         </div>
+          
+  //         <div className="form-group">
+  //           <label htmlFor="productDescription">Mô tả sản phẩm *</label>
+  //           <textarea
+  //             id="productDescription"
+  //             name="description"
+  //             value={productFormData.description}
+  //             onChange={handleProductFormChange}
+  //             placeholder="Nhập mô tả chi tiết về sản phẩm"
+  //             rows="4"
+  //             className={productFormErrors.description ? 'error' : ''}
+  //           />
+  //           {productFormErrors.description && <div className="error-message">{productFormErrors.description}</div>}
+  //         </div>
+          
+  //         <div className="form-actions">
+  //           <button 
+  //             type="submit" 
+  //             className="btn btn-primary"
+  //             disabled={isCreatingProduct}
+  //           >
+  //             <FiPlus />
+  //             {isCreatingProduct ? 'Đang tạo...' : 'Tạo sản phẩm'}
+  //           </button>
+  //         </div>
+  //       </form>
+  //     </div>
+  //   );
+  // };
+
   return (
     <div className="profile-page">
-      <div className="profile-container">
-        {/* Profile Sidebar */}
-        <div className="profile-sidebar">
-          <div className="profile-header">
-            <div className="profile-avatar">
-              {getInitials(user.name_display)}
-            </div>
-            <h2 className="profile-name">{user.name_display || 'Người dùng'}</h2>
-            <p className="profile-email">{user.email}</p>
+      {loading ? (
+        <div className="profile-container">
+          <div className="loading-spinner">
+            <p>Đang tải thông tin...</p>
           </div>
-          
-          <nav className="profile-nav">
-            <div className="profile-nav-item">
-              <button 
-                className={`profile-nav-link ${activeTab === 'info' ? 'active' : ''}`}
-                onClick={() => setActiveTab('info')}
-              >
-                <FiUser className="profile-nav-icon" />
-                Thông tin cá nhân
-              </button>
+        </div>
+      ) : error ? (
+        <div className="profile-container">
+          <div className="error-message">
+            <p>{error}</p>
+          </div>
+        </div>
+      ) : (
+        <div className="profile-container">
+          <div className="profile-sidebar">
+            <div className="profile-header">
+              <div className="profile-avatar">
+                {getInitials(user.name_display)}
+              </div>
+              <h2 className="profile-name">{user.name_display || 'Người dùng'}</h2>
+              <p className="profile-email">{user.email}</p>
             </div>
-            <div className="profile-nav-item">
-              <button 
-                className={`profile-nav-link ${activeTab === 'password' ? 'active' : ''}`}
-                onClick={() => setActiveTab('password')}
-              >
-                <FiLock className="profile-nav-icon" />
-                Đổi mật khẩu
-              </button>
-            </div>
-            {user.role === 'commercial_user' && (
+            
+            <nav className="profile-nav">
               <div className="profile-nav-item">
-                <button 
-                  className={`profile-nav-link ${activeTab === 'products' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('products')}
+                <button
+                  className={`profile-nav-link ${activeTab === 'info' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('info')}
                 >
-                  <FiPackage className="profile-nav-icon" />
-                  Sản phẩm của tôi
+                  <FiUser className="profile-nav-icon" />
+                  Thông tin cá nhân
                 </button>
               </div>
-            )}
-          </nav>
-        </div>
-
-        {/* Profile Content */}
-        <div className="profile-content">
-          <div className="content-header">
-            <h1 className="content-title">
-              {activeTab === 'info' && 'Thông tin cá nhân'}
-              {activeTab === 'password' && 'Đổi mật khẩu'}
-              {activeTab === 'products' && user.role === 'commercial_user' && 'Sản phẩm của tôi'}
-            </h1>
+              
+              <div className="profile-nav-item">
+                <button
+                  className={`profile-nav-link ${activeTab === 'password' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('password')}
+                >
+                  <FiLock className="profile-nav-icon" />
+                  Đổi mật khẩu
+                </button>
+              </div>
+              
+              {/* Tab tạo sản phẩm - chỉ cho commercial_user */}
+              {user.role === 'commercial_user' && (
+                <div className="profile-nav-item">
+                  <button
+                    className={`profile-nav-link ${activeTab === 'create-product' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('create-product')}
+                  >
+                    <FiPlus className="profile-nav-icon" />
+                    Tạo sản phẩm
+                  </button>
+                </div>
+              )}
+              
+              {/* Tab sản phẩm của tôi - chỉ cho commercial_user */}
+              {user.role === 'commercial_user' && (
+                <div className="profile-nav-item">
+                  <button
+                    className={`profile-nav-link ${activeTab === 'my-products' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('my-products')}
+                  >
+                    <FiPackage className="profile-nav-icon" />
+                    Sản phẩm của tôi
+                  </button>
+                </div>
+              )}
+              
+              {/* Tab sản phẩm đã mua - cho cả user và commercial_user */}
+              <div className="profile-nav-item">
+                <button
+                  className={`profile-nav-link ${activeTab === 'purchased-products' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('purchased-products')}
+                >
+                  <FiShoppingBag className="profile-nav-icon" />
+                  Sản phẩm đã mua
+                </button>
+              </div>
+            </nav>
           </div>
           
-          {renderContent()}
+          <div className="profile-content">
+            <div className="content-header">
+              <h1 className="content-title">
+                {activeTab === 'info' && 'Thông tin cá nhân'}
+                {activeTab === 'password' && 'Đổi mật khẩu'}
+                {activeTab === 'create-product' && 'Tạo sản phẩm mới'}
+                {activeTab === 'my-products' && 'Sản phẩm của tôi'}
+                {activeTab === 'purchased-products' && 'Sản phẩm đã mua'}
+              </h1>
+            </div>
+            
+            {renderContent()}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

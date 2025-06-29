@@ -76,7 +76,7 @@ const Navbar = () => {
     <nav className="navbar">
       <div className="container navbar-container">
         <div className="navbar-logo">
-          <Link to="/">Xù Pet Shop</Link>
+          <Link to="/">Animal Shop</Link>
         </div>
         
         <div className="navbar-toggle" onClick={handleToggle}>

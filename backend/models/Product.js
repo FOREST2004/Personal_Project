@@ -369,7 +369,6 @@ class Product extends BaseModel {
     }
   }
 
-  // Thêm method mới để lấy sản phẩm đã mua của user
   async findByBuyer(buyerId, options = {}) {
     try {
       return await this.findAllWithDetails({ 

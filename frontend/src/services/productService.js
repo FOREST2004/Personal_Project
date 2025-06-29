@@ -185,5 +185,37 @@ export const productService = {
         };
       }
     }
+  },
+
+  // Thêm function tạo sản phẩm mới
+  createProduct: async (productData) => {
+    try {
+      console.log('Creating product with data:', productData);
+      const response = await api.post('/products', productData);
+      console.log('Create product response:', response);
+      
+      return {
+        data: response.data.data || null
+      };
+    } catch (error) {
+      console.error('Error in createProduct:', error);
+      
+      if (error.response) {
+        throw {
+          message: error.response.data?.message || 'Lỗi khi tạo sản phẩm',
+          status: error.response.status
+        };
+      } else if (error.request) {
+        throw {
+          message: 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.',
+          status: 0
+        };
+      } else {
+        throw {
+          message: error.message || 'Đã xảy ra lỗi không xác định',
+          status: 0
+        };
+      }
+    }
   }
 };
