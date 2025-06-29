@@ -13,6 +13,18 @@ const ProductCard = ({ product, showSellerInfo = false, showBuyerInfo = false })
     return new Date(date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
+  // Hàm để lấy class CSS dựa trên trạng thái
+  const getStatusClass = (status) => {
+    switch(status) {
+      case 'active':
+        return 'card-availability card-availability-active';
+      case 'sold':
+        return 'card-availability card-availability-sold';
+      default:
+        return 'card-availability card-availability-unavailable';
+    }
+  };
+
   return (
     <Link to={`/products/${product.id_product}`} className="product-card">
       <div className="card-img-wrapper">
@@ -37,13 +49,11 @@ const ProductCard = ({ product, showSellerInfo = false, showBuyerInfo = false })
           </div>
         )}
         
-
-        
         <div className="card-post-date">
           <span>Ngày đăng: {formatDate(product.date)}</span>
         </div>
        
-        <div className="card-availability">
+        <div className={getStatusClass(product.status)}>
           <span>
             {product.status === 'active' ? 'Còn hàng' :
               product.status === 'sold' ? 'Đã bán' :

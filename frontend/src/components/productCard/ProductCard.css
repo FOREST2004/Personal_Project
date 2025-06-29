@@ -89,12 +89,39 @@
 .card-availability {
   margin: 10px 0;
   text-align: center;
-  background-color: var(--primary-color);
   color: white;
   padding: 4px 8px;
   border-radius: 20px;
   font-size: 0.8rem;
   font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+/* Màu xanh lá cho "Còn hàng" */
+.card-availability-active {
+  background-color: #28a745;
+}
+
+.card-availability-active:hover {
+  background-color: #218838;
+}
+
+/* Màu đỏ cho "Đã bán" */
+.card-availability-sold {
+  background-color: #dc3545;
+}
+
+.card-availability-sold:hover {
+  background-color: #c82333;
+}
+
+/* Màu xám cho "Không khả dụng" */
+.card-availability-unavailable {
+  background-color: #6c757d;
+}
+
+.card-availability-unavailable:hover {
+  background-color: #5a6268;
 }
 
 .card-post-date {
