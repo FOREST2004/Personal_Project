@@ -204,6 +204,7 @@
     background-color: var(--light-gray-color);
   }
   
+  /* Nút bình thường */
   .place-order-btn {
     display: flex;
     align-items: center;
@@ -221,6 +222,24 @@
   
   .place-order-btn:hover {
     background-color: #008a80;
+  }
+  
+  /* Nút disabled (xám) */
+  .place-order-btn.disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.6;
+    transform: none;
+  }
+  
+  .place-order-btn.disabled:hover {
+    background-color: #6c757d;
+    transform: none;
+    box-shadow: none;
+  }
+  
+  .place-order-btn.disabled .warning-icon {
+    color: #ffc107;
   }
   
   /* Checkout Summary */
@@ -438,3 +457,161 @@
       justify-content: center;
     }
   }
+
+/* Wallet Summary */
+.wallet-summary {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  margin-bottom: 15px;
+  border: 2px solid var(--primary-color);
+}
+
+.wallet-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.wallet-icon {
+  font-size: 1.2rem;
+  color: var(--primary-color);
+}
+
+.wallet-header h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.wallet-balance {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding: 10px;
+  background-color: var(--light-gray-color);
+  border-radius: 6px;
+}
+
+.balance-amount {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--primary-color);
+}
+
+.wallet-calculation {
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  padding: 15px;
+}
+
+.calculation-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.calculation-row.final {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 0;
+}
+
+.calculation-row.sufficient {
+  color: var(--success-color);
+}
+
+.calculation-row.insufficient {
+  color: var(--error-color);
+}
+
+.calculation-divider {
+  height: 1px;
+  background-color: var(--border-color);
+  margin: 10px 0;
+}
+
+.insufficient-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 4px;
+  color: #856404;
+  font-size: 0.85rem;
+}
+
+/* Payment Method Wallet Styles */
+.payment-method-icon.wallet {
+  background-color: var(--primary-color);
+  color: white;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
+.wallet-info {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.balance-sufficient {
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.balance-insufficient {
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.check-icon {
+  color: #28a745;
+  font-size: 1rem;
+}
+
+.warning-icon {
+  color: #dc3545;
+  font-size: 1rem;
+}
+
+/* Disabled button */
+.place-order-btn.disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+}
+
+.place-order-btn.disabled:hover {
+  background-color: #6c757d;
+  transform: none;
+  box-shadow: none;
+}
+
+.place-order-btn.disabled .warning-icon {
+  color: #ffc107;
+}

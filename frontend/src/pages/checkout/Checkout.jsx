@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { FiMapPin, FiUser, FiPhone, FiCreditCard, FiDollarSign, FiCheck, FiChevronRight } from 'react-icons/fi';
+import { Link, useNavigate } from 'react-router-dom';
+import { BiWallet } from 'react-icons/bi';
+import { FiMapPin, FiUser, FiPhone, FiCreditCard, FiDollarSign, FiCheck, FiChevronRight, FiLock, FiAlertTriangle } from 'react-icons/fi';
 import './Checkout.css';
 
 const Checkout = () => {
+  const navigate = useNavigate();
+  
   // Form state
   const [formData, setFormData] = useState({
     fullName: '',
@@ -12,7 +15,7 @@ const Checkout = () => {
     province: '',
     district: '',
     ward: '',
-    paymentMethod: 'cod',
+    paymentMethod: 'wallet',
     notes: ''
   });
   
@@ -20,38 +23,55 @@ const Checkout = () => {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // Get mock cart data
+  // Wallet state
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [walletLoading, setWalletLoading] = useState(true);
+  
+  // Format price to VND
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
+  };
+  
+  // Get cart data from localStorage and wallet balance
   useEffect(() => {
     setLoading(true);
+    setWalletLoading(true);
     
-    // Mock cart data
-    setTimeout(() => {
-      const mockCartItems = [
-        {
-          id: 1,
-          name: 'iPhone 15 Pro Max 256GB',
-          price: 28990000,
-          originalPrice: 32990000,
-          discount: 12,
-          quantity: 1,
-          image: 'https://via.placeholder.com/150?text=iPhone+15',
-        },
-        {
-          id: 2,
-          name: 'Cáp sạc USB-C to Lightning 1m',
-          price: 390000,
-          originalPrice: 590000,
-          discount: 33,
-          quantity: 2,
-          image: 'https://via.placeholder.com/150?text=Cáp+sạc',
-        },
-      ];
+    try {
+      // Get selected items from localStorage
+      const checkoutItems = localStorage.getItem('checkoutItems');
       
-      setCartItems(mockCartItems);
+      if (!checkoutItems) {
+        // Nếu không có dữ liệu checkout, chuyển về trang giỏ hàng
+        alert('Không có sản phẩm nào được chọn để thanh toán. Vui lòng quay lại giỏ hàng.');
+        navigate('/cart');
+        return;
+      }
+      
+      const selectedItems = JSON.parse(checkoutItems);
+      
+      // Kiểm tra nếu mảng rỗng
+      if (!selectedItems || selectedItems.length === 0) {
+        alert('Không có sản phẩm nào được chọn để thanh toán. Vui lòng quay lại giỏ hàng.');
+        navigate('/cart');
+        return;
+      }
+      
+      // Mock wallet balance - 35 triệu VND (có thể thay thế bằng API call thực)
+      const mockWalletBalance = 35000000;
+      
+      setCartItems(selectedItems);
+      setWalletBalance(mockWalletBalance);
       setLoading(false);
-    }, 500);
-  }, []);
-  
+      setWalletLoading(false);
+      
+    } catch (error) {
+      console.error('Error loading checkout data:', error);
+      alert('Có lỗi xảy ra khi tải dữ liệu. Vui lòng thử lại.');
+      navigate('/cart');
+    }
+  }, [navigate]);
+
   // Handle form change
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -72,14 +92,36 @@ const Checkout = () => {
       return;
     }
     
+    // Check wallet balance if paying with wallet
+    if (formData.paymentMethod === 'wallet') {
+      const { total } = calculateTotals();
+      if (walletBalance < total) {
+        alert('Số dư ví không đủ để thanh toán. Vui lòng chọn phương thức thanh toán khác hoặc nạp thêm tiền vào ví.');
+        return;
+      }
+    }
+    
     // Process checkout
     console.log('Checkout data:', formData);
-    alert('Đặt hàng thành công! Cảm ơn bạn đã mua sắm.');
-  };
-  
-  // Format price to VND
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
+    console.log('Selected items:', cartItems);
+    
+    if (formData.paymentMethod === 'wallet') {
+      const { total } = calculateTotals();
+      const newBalance = walletBalance - total;
+      setWalletBalance(newBalance);
+      
+      // Xóa dữ liệu checkout sau khi thanh toán thành công
+      localStorage.removeItem('checkoutItems');
+      
+      alert(`Đặt hàng thành công! Số dư ví còn lại: ${formatPrice(newBalance)}`);
+      navigate('/'); // Chuyển về trang chủ
+    } else {
+      // Xóa dữ liệu checkout sau khi thanh toán thành công
+      localStorage.removeItem('checkoutItems');
+      
+      alert('Đặt hàng thành công! Cảm ơn bạn đã mua sắm.');
+      navigate('/'); // Chuyển về trang chủ
+    }
   };
   
   // Calculate totals
@@ -88,8 +130,10 @@ const Checkout = () => {
     let discount = 0;
     
     cartItems.forEach(item => {
-      subtotal += item.originalPrice * item.quantity;
-      discount += (item.originalPrice - item.price) * item.quantity;
+      // Sử dụng originalPrice nếu có, nếu không thì dùng price
+      const originalPrice = item.originalPrice || item.price;
+      subtotal += originalPrice * item.quantity;
+      discount += (originalPrice - item.price) * item.quantity;
     });
     
     const shippingFee = subtotal > 500000 ? 0 : 30000;
@@ -105,12 +149,11 @@ const Checkout = () => {
   
   const { subtotal, discount, shippingFee, total } = calculateTotals();
   
-  // Mock provinces data
-  const provinces = ['Hà Nội', 'TP Hồ Chí Minh', 'Đà Nẵng', 'Hải Phòng', 'Cần Thơ'];
+  // Check if wallet has enough balance
+  const hasEnoughBalance = walletBalance >= total;
+  const remainingBalance = walletBalance - total;
   
-  // Mock districts and wards (would be dynamic based on province in real app)
-  const districts = ['Quận 1', 'Quận 2', 'Quận 3', 'Quận 4', 'Quận 5'];
-  const wards = ['Phường 1', 'Phường 2', 'Phường 3', 'Phường 4', 'Phường 5'];
+
   
   if (loading) {
     return (
@@ -140,7 +183,7 @@ const Checkout = () => {
                 
                 <div className="form-row">
                   <div className="form-group">
-                    <label htmlFor="fullName">Họ và tên</label>
+                    <label htmlFor="fullName">Họ và tên người nhận</label>
                     <input
                       type="text"
                       id="fullName"
@@ -178,56 +221,7 @@ const Checkout = () => {
                     required
                   />
                 </div>
-                
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="province">Tỉnh/Thành phố</label>
-                    <select
-                      id="province"
-                      name="province"
-                      value={formData.province}
-                      onChange={handleChange}
-                      required
-                    >
-                      <option value="">Chọn Tỉnh/Thành phố</option>
-                      {provinces.map((province, index) => (
-                        <option key={index} value={province}>{province}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div className="form-group">
-                    <label htmlFor="district">Quận/Huyện</label>
-                    <select
-                      id="district"
-                      name="district"
-                      value={formData.district}
-                      onChange={handleChange}
-                      required
-                    >
-                      <option value="">Chọn Quận/Huyện</option>
-                      {districts.map((district, index) => (
-                        <option key={index} value={district}>{district}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div className="form-group">
-                    <label htmlFor="ward">Phường/Xã</label>
-                    <select
-                      id="ward"
-                      name="ward"
-                      value={formData.ward}
-                      onChange={handleChange}
-                      required
-                    >
-                      <option value="">Chọn Phường/Xã</option>
-                      {wards.map((ward, index) => (
-                        <option key={index} value={ward}>{ward}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+               
                 
                 <div className="form-group">
                   <label htmlFor="notes">Ghi chú (tùy chọn)</label>
@@ -248,6 +242,45 @@ const Checkout = () => {
                 </div>
                 
                 <div className="payment-methods">
+                  <label className="payment-method">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="wallet"
+                      checked={formData.paymentMethod === 'wallet'}
+                      onChange={handleChange}
+                    />
+                    <div className="payment-method-content">
+                      <div className="payment-method-icon wallet">
+                        <BiWallet />
+                      </div>
+                      <div className="payment-method-info">
+                        <h3>Thanh toán bằng ví điện tử</h3>
+                        <p>Số dư hiện tại: <strong>{formatPrice(walletBalance)}</strong></p>
+                        {formData.paymentMethod === 'wallet' && (
+                          <div className="wallet-info">
+                            {hasEnoughBalance ? (
+                              <p className="balance-sufficient">
+                                <FiCheck className="check-icon" />
+                                Số dư sau khi mua: <strong>{formatPrice(remainingBalance)}</strong>
+                              </p>
+                            ) : (
+                              <p className="balance-insufficient">
+                                <FiAlertTriangle className="warning-icon" />
+                                Số dư không đủ. Thiếu: <strong>{formatPrice(total - walletBalance)}</strong>
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      {formData.paymentMethod === 'wallet' && (
+                        <div className="payment-method-check">
+                          <FiCheck />
+                        </div>
+                      )}
+                    </div>
+                  </label>
+                  
                   <label className="payment-method">
                     <input
                       type="radio"
@@ -327,15 +360,66 @@ const Checkout = () => {
                   Quay lại giỏ hàng
                 </Link>
                 
-                <button type="submit" className="place-order-btn">
-                  Đặt hàng
-                  <FiChevronRight />
+                <button 
+                  type="submit" 
+                  className={`place-order-btn ${
+                    (formData.paymentMethod === 'wallet' && !hasEnoughBalance) ? 'disabled' : ''
+                  }`}
+                  disabled={formData.paymentMethod === 'wallet' && !hasEnoughBalance}
+                  title={
+                    formData.paymentMethod === 'wallet' && !hasEnoughBalance 
+                      ? 'Số dư ví không đủ để thanh toán' 
+                      : 'Đặt hàng ngay'
+                  }
+                >
+                  {formData.paymentMethod === 'wallet' && !hasEnoughBalance ? (
+                    <>
+                      <FiAlertTriangle />
+                      Số dư không đủ
+                    </>
+                  ) : (
+                    <>
+                      Đặt hàng
+                      <FiChevronRight />
+                    </>
+                  )}
                 </button>
               </div>
             </form>
           </div>
           
           <div className="checkout-summary-container">
+            {/* Wallet Summary */}
+            {!walletLoading && (
+              <div className="wallet-summary">
+                <div className="wallet-header">
+                  <BiWallet className="wallet-icon" />
+                  <h3>Ví điện tử</h3>
+                </div>
+                <div className="wallet-balance">
+                  <span>Số dư hiện tại:</span>
+                  <span className="balance-amount">{formatPrice(walletBalance)}</span>
+                </div>
+                <div className="wallet-calculation">
+                  <div className="calculation-row">
+                    <span>Tổng thanh toán:</span>
+                    <span>- {formatPrice(total)}</span>
+                  </div>
+                  <div className="calculation-divider"></div>
+                  <div className={`calculation-row final ${hasEnoughBalance ? 'sufficient' : 'insufficient'}`}>
+                    <span>Số dư sau khi mua:</span>
+                    <span>{formatPrice(remainingBalance)}</span>
+                  </div>
+                  {!hasEnoughBalance && (
+                    <div className="insufficient-notice">
+                      <FiAlertTriangle />
+                      <span>Số dư không đủ để thanh toán</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
             <div className="checkout-summary">
               <h2>Tóm tắt đơn hàng</h2>
               
